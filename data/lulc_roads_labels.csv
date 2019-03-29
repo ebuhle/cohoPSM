@@ -1,0 +1,20 @@
+data_label,plot_label
+ccap_decid,Deciduous
+ccap_open,Open space
+ccap_evgrn,Evergreen
+ccap_hdev,High developed
+ccap_ldev,Low developed
+ccap_mdev,Medium developed
+ccap_mxforest,Mixed forest
+ccap_wetland,Wetland
+ccap_ag,Agriculture
+roads1,Interstate
+roads2,Principal arterial
+roads3,Minor arterial
+roads4,Collector arterial
+roads5,Local roads
+traffic,Traffic intensity
+nlcd_imperv,Imperviousness
+restoration,Restoration
+pop_census,U.S. Census
+pop_lscan,LandScan
