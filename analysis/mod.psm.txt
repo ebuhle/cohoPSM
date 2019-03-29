@@ -1,0 +1,43 @@
+model
+{
+# Site-specific intercepts
+for(j in 1:S)
+{
+b0[j] ~ dnorm(mu.b0, tau.b0)
+}
+
+# Fitted values and binomial likelihood
+for(i in 1:N)
+{
+fit.logit.psm[i] <- b0[site[i]] + w.Imp*b.Imp*Impervious[i] + w.Road*b.Road*FC00.Road[i] + w.dry*b.dry*dry[i] + w.rain*b.rain*rain[i] + 
+w.Impdry*b.Impdry*Impervious[i]*dry[i] + w.Imprain*Impervious[i]*rain[i] +
+w.Roaddry*FC00.Road[i]*dry[i] + w.Roadrain*FC00.Road[i]*rain[i]
+fit.psm[i] <- 1/(1 + exp(-fit.logit.psm[i]))
+n.psm[i] ~ dbin(fit.psm[i], n.total[i])
+}
+
+# Priors
+mu.b0 ~ dnorm(0,1.0E-6)
+sigma.b0 ~ dunif(0,100)
+tau.b0 <- pow(sigma.b0,-2)
+w.Imp ~ dbern(0.5)
+b.Imp ~ dnorm(0,1.0E-6)
+w.Road ~ dbern(0.5)
+b.Road ~ dnorm(0,1.0E-6)
+w.dry ~ dbern(0.5)
+b.dry ~ dnorm(0,1.0E-6)
+w.rain ~ dbern(0.5)
+b.rain ~ dnorm(0,1.0E-6)
+v.Impdry <- 0 #~ dbern(0.5)
+w.Impdry <- w.Imp*w.dry*v.Impdry
+b.Impdry <- 0 #~ dnorm(0,1.0E-6)
+v.Imprain <- 0 #~ dbern(0.5)
+w.Imprain <- w.Imp*w.rain*v.Imprain
+b.Imprain <- 0 #~ dnorm(0,1.0E-6)
+v.Roaddry <- 0 #~ dbern(0.5)
+w.Roaddry <- w.Road*w.dry*v.Roaddry
+b.Roaddry <- 0 #~ dnorm(0,1.0E-6)
+v.Roadrain <- 0 #~ dbern(0.5)
+w.Roadrain <- w.Road*w.rain*v.Roadrain
+b.Roadrain <- 0 #~ dnorm(0,1.0E-6)
+}
