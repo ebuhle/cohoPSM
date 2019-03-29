@@ -3,3 +3,7 @@
 .Rhistory
 **/*.RData
 .Ruserdata
+.Rproj.user
+data/bcmatUW2002.txt
+data/bcmatParcel.txt
+data/bcmatRoad.txt
