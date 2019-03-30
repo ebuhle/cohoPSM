@@ -25,10 +25,10 @@ spawner_data <- read.csv(file.path(data_path,"spawner_data.csv"), header=T)
 spatial_data <- read.csv(file.path(data_path,"spatial_data.csv"), header=T)
 
 # LU/LC and roads data
-lulc_roads_data <- spatial_data[,c("site","area","ccap_decid","ccap_open","ccap_evgrn","ccap_hdev","ccap_ldev",
-                                   "ccap_mdev","ccap_mxforest","ccap_wetland","ccap_ag","ccap_other",
-                                   "roads1","roads2","roads3","roads4","roads5","traffic","nlcd_imperv",
-                                   "restoration","pop_census","pop_lscan")]
+lulc_roads_data <- spatial_data[,c("site","watershed","area","ccap_decid","ccap_open","ccap_evgrn",
+                                   "ccap_hdev","ccap_ldev","ccap_mdev","ccap_mxforest","ccap_wetland","ccap_ag",
+                                   "ccap_other","roads1","roads2","roads3","roads4","roads5","traffic",
+                                   "nlcd_imperv","restoration","pop_census","pop_lscan")]
 
 # convert basin area from m2 to ha
 lulc_roads_data$area <- lulc_roads_data$area/1e4
@@ -60,9 +60,9 @@ ppt_data <- data.frame(site = rep(ppt_data$site, each = n_yrs_ppt),
 rm(list=c("ppt_su_cols","ppt_fa_cols","n_yrs_ppt"))
 
 # merge basin-specific variables and annual su and fa ppt into spawner data
-psm <- merge(spawner_data, ppt_data, by = c("site","year"))
-psm <- merge(psm, spatial_data[,!grepl("ppt", names(spatial_data))], by = c("ID","site"))
-psm <- data.frame(psm[,c("ID","site","watershed","year","n","n_psm","ppt_su","ppt_fa","area")], psm[,-(1:10)])
+psm <- merge(spawner_data[,-1], ppt_data, by = c("site","year"))
+psm <- merge(psm, lulc_roads_data, by = "site")
+psm <- data.frame(psm[,c("site","watershed","year","n","n_psm","ppt_su","ppt_fa","area")], psm[,-(1:9)])
 psm <- psm[order(psm$site,psm$year),]
 
 #----------------------------------------------
@@ -72,6 +72,7 @@ psm <- psm[order(psm$site,psm$year),]
 # read in landscape data
 spatial_data_pre <- read.csv(file.path(data_path,"spatial_data_predict.csv"), header=T)
 names(spatial_data_pre) <- gsub("ID", "site", names(spatial_data_pre))
+spatial_data_pre$watershed <- NA
 
 # convert basin area from m2 to ha
 spatial_data_pre$area <- spatial_data_pre$area/1e4
@@ -92,21 +93,55 @@ lulc_roads_data_all <- rbind(data.frame(data = "psm", lulc_roads_data),
 # Add rows to psm for unobserved sites, plus one extra row for each observed site
 # containing no PSM data and having ppt set to the mean. These extra rows are 
 # used to generate predictions for monitored sites under baseline precip conditions.
-psm_all <- as.data.frame(matrix(nrow = nrow(spatial_data_pre) + nrow(spatial_data), ncol = ncol(psm)))
-names(psm_all) <- names(psm)
-psm_all$site <- c(as.character(lulc_roads_data$site), as.character(lulc_roads_data_pre$site))
-psm_all$n <- 0
-psm_all$n_psm <- 0
-psm_all$ppt_su <- mean(psm$ppt_su)
-psm_all$ppt_fa <- mean(psm$ppt_fa)
-psm_all <- rbind(data.frame(data = "psm", psm), data.frame(data = "pre", psm_all))
+psm_all <- data.frame(lulc_roads_data_all, year = NA, n = 0, n_psm = 0,
+                      ppt_su = mean(psm$ppt_su), ppt_fa = mean(psm$ppt_fa))
+psm_all$data <- "pre"
+psm_all <- psm_all[,c("data", names(psm))]
+psm_all <- rbind(data.frame(data = "psm", psm), psm_all)
+psm_all <- data.frame(ID = 1:nrow(psm_all), psm_all)
 
 
 #==================================================================
 # HIERARCHICAL REGRESSION MODELS FOR LANDSCAPE DATA AND PSM
 #==================================================================
 
+# Modify dataset
+# precip, traffic and log(traffic) centered and scaled to SD = 1
+psm_all_reg <- psm_all
+psm_all_reg <- transform(psm_all_reg, ppt_su = scale(ppt_su), ppt_fa = scale(ppt_fa),
+                         traffic = scale(traffic), log_traffic = scale(log(pmax(traffic, 0.1))))
+##
+psm_all_reg$Z <- stan_mean(stan.psm.all,"Z")[as.numeric(psm_all_reg$site)]
+##
 
+# Fit models
+###
+glmm_psm_Z <- stan_glmer(cbind(n_psm, n - n_psm) ~ (ppt_su + ppt_fa) * Z + 
+                           (ppt_su + ppt_fa || site) + (1 | ID),
+                       data = psm_all_reg, subset = data == "psm",
+                       family = binomial("logit"),
+                       prior_intercept = normal(0,3),
+                       prior = normal(0,3),
+                       prior_covariance = decov(),
+                       chains = 3, cores = 3, iter = 2000, warmup = 1000,
+                       control = list(adapt_delta = 0.9))
+
+glmm_psm_Z
+summary(glmm_psm_Z, prob = c(0.025, 0.5, 0.975), pars = "beta", include = FALSE)
+###
+
+glmm_psm <- stan_glmer(cbind(n_psm, n - n_psm) ~ (ppt_su + ppt_fa) * log_traffic + 
+                         (ppt_su + ppt_fa || site) + (1 | ID),
+                       data = psm_all_reg, subset = data == "psm",
+                       family = binomial("logit"),
+                       prior_intercept = normal(0,3),
+                       prior = normal(0,3),
+                       prior_covariance = decov(),
+                       chains = 3, cores = 3, iter = 2000, warmup = 1000,
+                       control = list(adapt_delta = 0.9))
+
+glmm_psm
+summary(glmm_psm, prob = c(0.025, 0.5, 0.975), pars = "beta", include = FALSE)
 
 
 #==================================================================
@@ -152,8 +187,8 @@ X <- cbind(X2,X1,X3)
 rm(list = c("X1","X2","X3"))
 
 # indices of covariates assumed to be normally (gamma) distributed
-normal_indx <- which(substring(dimnames(X)[[2]],1,4) %in% c("ccap","nlcd"))
-gamma_indx <- which(!(substring(dimnames(X)[[2]],1,4) %in% c("ccap","nlcd")))
+normal_indx <- grep("ccap|nlcd", colnames(X))
+gamma_indx <- which(!grepl("ccap|nlcd", colnames(X)))
 
 # Data for Stan
 stan_dat <- list(S = nrow(X), 
@@ -162,8 +197,8 @@ stan_dat <- list(S = nrow(X),
                  L = 1,  # user-specified!
                  N = nrow(psm), 
                  site = as.numeric(psm$site),
-                 ppt_su = as.vector(scale(psm$ppt_su/10, scale=F)),
-                 ppt_fa = as.vector(scale(psm$ppt_fa/10, scale=F)),
+                 ppt_su = array(as.vector(scale(psm$ppt_su/10, scale = FALSE)), dim = nrow(psm)),
+                 ppt_fa = array(as.vector(scale(psm$ppt_fa/10, scale = FALSE)), dim = nrow(psm)),
                  I0_Z = 1,
                  I_su = 1,
                  I_su_Z = 1,
@@ -176,59 +211,56 @@ stan_dat <- list(S = nrow(X),
 
 
 # Function to generate initial values for chains
-stan_init <- function() 
+stan_init <- function(stan_dat) 
 {
-  if(exists("stan_dat"))
-    for(i in names(stan_dat)) assign(i, stan_dat[[i]])
-  # X <- t(X)
-  D <- D_normal + D_gamma
-  
-  list(a0 = rnorm(D, c(colMeans(X[,1:D_normal]), colMeans(log(X[,-(1:D_normal)]))), 1),
-       A_nid_vec = array(rnorm(D*L - L*(L-1)/2, 0, 1), dim = D*L - L*(L-1)/2),
-       Z_nid = matrix(rnorm(S*L, 0, 1), nrow = S, ncol = L),
-       phi = runif(D, 0.5, 1),
-       # mu_b0 = rnorm(1, qlogis(mean(n_psm/n, na.rm=T)), 1),
-       mu_b0 = rnorm(1, -3, 1),
-       b0_Z_nid = array(rnorm(L, 1, 0.5), dim = L),
-       sigma_b0 = runif(1, 1, 2),
-       b0_std = array(rnorm(S, 0, 0.1), dim = S),
-       mu_b_su = rnorm(1, 0.3, 0.1),
-       b_su_Z_nid = array(rnorm(L, -0.2, 0.1), dim = L),
-       sigma_b_su = runif(1, 0.1, 1),
-       b_su_std = array(rnorm(S, 0, 0.1), dim = S),
-       mu_b_fa = rnorm(1, 0.03, 0.02),
-       b_fa_Z_nid = array(rnorm(L, -0.03, 0.02), dim = L),
-       sigma_b_fa = runif(1, 0.02, 0.1),
-       b_fa_std = array(rnorm(S, 0, 0.1), dim = S),
-       sigma_psm = runif(1, 0.5, 2),
-       logit_p_psm_std = array(rnorm(N, 0, 0.1), dim = N))
+  with(stan_dat, {
+    # X <- t(X)
+    D <- D_normal + D_gamma
+    
+    list(a0 = rnorm(D, c(colMeans(X[,1:D_normal]), colMeans(log(X[,-(1:D_normal)]))), 1),
+         A_nid_vec = array(rnorm(D*L - L*(L-1)/2, 0, 1), dim = D*L - L*(L-1)/2),
+         Z_nid = matrix(rnorm(S*L, 0, 1), nrow = S, ncol = L),
+         phi = runif(D, 0.5, 1),
+         # mu_b0 = rnorm(1, qlogis(mean(n_psm/n, na.rm=T)), 1),
+         mu_b0 = rnorm(1, -3, 1),
+         b0_Z_nid = array(rnorm(L, 1, 0.5), dim = L),
+         sigma_b0 = runif(1, 1, 2),
+         b0_std = array(rnorm(S, 0, 0.1), dim = S),
+         mu_b_su = rnorm(1, 0.3, 0.1),
+         b_su_Z_nid = array(rnorm(L, -0.2, 0.1), dim = L),
+         sigma_b_su = runif(1, 0.1, 1),
+         b_su_std = array(rnorm(S, 0, 0.1), dim = S),
+         mu_b_fa = rnorm(1, 0.03, 0.02),
+         b_fa_Z_nid = array(rnorm(L, -0.03, 0.02), dim = L),
+         sigma_b_fa = runif(1, 0.02, 0.1),
+         b_fa_std = array(rnorm(S, 0, 0.1), dim = S),
+         sigma_psm = runif(1, 0.5, 2),
+         logit_p_psm_std = array(rnorm(N, 0, 0.1), dim = N))
+  })
 }
 
 # Fit it!
 stan_psm <- stan(file = "cohoPSM_SEM_Stan.stan",
                  data = stan_dat, 
-                 init = stan_init,
+                 init = lapply(1:3, function(i) stan_init(stan_dat)),
                  pars = c("a0","A","Z","phi","g_mu_X",
                           "mu_b0","b0_Z","sigma_b0","b0",
                           "mu_b_su","b_su_Z","sigma_b_su","b_su",
                           "mu_b_fa","b_fa_Z","sigma_b_fa","b_fa",
                           "sigma_psm","p_psm","ll_psm"), 
-                 chains = 3, iter = 50000, warmup = 10000, thin = 40, cores = 3,
-                 control = list(adapt_delta = 0.8))
+                 chains = 3, iter = 12000, warmup = 2000, thin = 5, cores = 3)
 
-# Inspect summary and a few traceplots and bivariate posteriors
-print(stan_psm, pars = c("g_mu_X","ll_psm"), include = F)
-traceplot(stan_psm, pars = c("A","lp__"), inc_warmup = F)
-traceplot(stan_psm, pars = c("Z"), inc_warmup = F)
-pairs(stan_psm, pars = c("a0[1]", "a0[2]", "A[1,1]", "A[2,1]", "Z[1,1]"), condition = "accept_stat__")
-pairs(stan_psm, pars = paste("A[", normal_indx, ",1]", sep=""), labels = colnames(X)[normal_indx])
-pairs(stan_psm, pars = paste("A[", gamma_indx, ",1]", sep=""), labels = colnames(X)[gamma_indx])
+# Inspect summary use shinystan to explore samples
+print(stan_psm, pars = c("g_mu_X","ll_psm","Z"), include = F)
+launch_shinystan(stan_psm)
 
+# Save stanfit
+save(stan_psm, file = "stan_psm.RData")
 
 #------------------------------------------------------------------
 # In-sample model selection:
 # Fit all candidate models to sites with PSM observations,
-# compare expected out-of-sample performance via WAIC and IS-LOO
+# compare expected out-of-sample performance via WAIC and PSIS-LOO
 #------------------------------------------------------------------
 
 # Create list to store results
@@ -264,7 +296,7 @@ for(i in 1:length(stan_psm_list))
                        "mu_b_su","b_su_Z","sigma_b_su","b_su",
                        "mu_b_fa","b_fa_Z","sigma_b_fa","b_fa",
                        "sigma_psm","p_psm","ll_psm"), 
-              chains = 3, iter = 50000, warmup = 10000, thin = 40, cores = 3)
+              chains = 3, iter = 12000, warmup = 2000, thin = 5, cores = 3)
   
   # Store fitted object
   stan_psm_list[[i]] <- list(fit = fit, 
@@ -300,6 +332,9 @@ for(i in 1:length(stan_psm_list))
 stan_psm_mods <- stan_psm_mods[order(stan_psm_mods$dLOO),]                            
 stan_psm_mods[order(stan_psm_mods$dWAIC),]
 
+# Save objects
+save(stan_psm_list, stan_psm_mods, file = "stan_psm_WAIC_LOO.RData")
+
 
 #---------------------------------------------------------------------
 # K-fold cross-validation over YEARS:
@@ -318,33 +353,33 @@ fit1 <- stan(file = "cohoPSM_SEM_Stan.stan",
              data = stan_dat, 
              init = stan_init,
              pars = names(stan_init()), 
-             chains = 3, iter = 10000, warmup = 5000, thin = 1, cores = 3,
-             control = list(adapt_delta = 0.8))
+             chains = 3, iter = 12000, warmup = 2000, thin = 5, cores = 3)
 
-stan_init_cv <- function()
+stan_init_cv <- function(fit)
 {
-  samples <- extract(fit1)
+  samples <- extract(fit)
   M <- nrow(samples$a0)
   i <- sample(M,1)
   
-  list(a0 = samples$a0[i,],
-       A_nid_vec = array(samples$A_nid_vec[i,], dim = ncol(samples$A_nid_vec)),
-       Z_nid = matrix(samples$Z[i,,], nrow = dim(samples$Z)[2], ncol = dim(samples$Z)[3]),
-       phi = samples$phi[i,],
-       mu_b0 = samples$mu_b0[i],
-       b0_Z_nid = array(samples$b0_Z_nid[i,], dim = ncol(samples$b0_Z_nid)),
-       sigma_b0 = samples$sigma_b0[i],
-       b0_std = array(samples$b0_std[i,], dim = ncol(samples$b0_std)),
-       mu_b_su = samples$mu_b_su[i],
-       b_su_Z_nid = array(samples$b_su_Z_nid[i,], dim = ncol(samples$b_su_Z_nid)),
-       sigma_b_su = samples$sigma_b_su[i],
-       b_su_std = array(samples$b_su_std[i,], dim = ncol(samples$b_su_std)),
-       mu_b_fa = samples$mu_b_fa[i],
-       b_fa_Z_nid = array(samples$b_fa_Z_nid[i,], dim = ncol(samples$b_fa_Z_nid)),
-       sigma_b_fa = samples$sigma_b_fa[i],
-       b_fa_std = array(samples$b_fa_std[i,], dim = ncol(samples$b_fa_std)),
-       sigma_psm = samples$sigma_psm[i],
-       logit_p_psm_std = array(samples$logit_p_psm_std[i,], dim = ncol(samples$logit_p_psm_std)))
+  with(samples, 
+       list(a0 = a0[i,],
+            A_nid_vec = array(A_nid_vec[i,], dim = ncol(A_nid_vec)),
+            Z_nid = matrix(Z[i,,], nrow = dim(Z)[2], ncol = dim(Z)[3]),
+            phi = phi[i,],
+            mu_b0 = mu_b0[i],
+            b0_Z_nid = array(b0_Z_nid[i,], dim = ncol(b0_Z_nid)),
+            sigma_b0 = sigma_b0[i],
+            b0_std = array(b0_std[i,], dim = ncol(b0_std)),
+            mu_b_su = mu_b_su[i],
+            b_su_Z_nid = array(b_su_Z_nid[i,], dim = ncol(b_su_Z_nid)),
+            sigma_b_su = sigma_b_su[i],
+            b_su_std = array(b_su_std[i,], dim = ncol(b_su_std)),
+            mu_b_fa = mu_b_fa[i],
+            b_fa_Z_nid = array(b_fa_Z_nid[i,], dim = ncol(b_fa_Z_nid)),
+            sigma_b_fa = sigma_b_fa[i],
+            b_fa_std = array(b_fa_std[i,], dim = ncol(b_fa_std)),
+            sigma_psm = sigma_psm[i],
+            logit_p_psm_std = array(logit_p_psm_std[i,], dim = ncol(logit_p_psm_std))))
 }
 
 # Loop over candidate models and then over years, fit to data, predict hold-out data,
@@ -374,13 +409,13 @@ for(i in 1:length(stan_psm_cv_year_list))
     cat("Working on model", i, "and hold-out year", j, "(see Viewer for progress) \n")
     fit <- stan(file = "cohoPSM_SEM_Stan.stan",
                 data = stan_dat_cv_year, 
-                init = lapply(1:3,function(x) stan_init_cv()),
+                init = lapply(1:3,function(i) stan_init_cv(fit1)),
                 pars = c("a0","A","Z","phi",
                          "mu_b0","b0_Z","sigma_b0","b0",
                          "mu_b_su","b_su_Z","sigma_b_su","b_su",
                          "mu_b_fa","b_fa_Z","sigma_b_fa","b_fa",
                          "sigma_psm","p_psm","ll_psm"), 
-                chains = 3, iter = 50000, warmup = 10000, thin = 40, cores = 3)
+                chains = 3, iter = 12000, warmup = 2000, thin = 5, cores = 3)
     
     # Store fitted object and log-likelihood matrix
     stan_psm_cv_year_list[[i]]$fit[[as.character(j)]] <- fit
@@ -412,6 +447,9 @@ for(i in 1:length(stan_psm_cv_year_list))
 }
 
 stan_psm_cv_year_mods
+
+# Save objects
+save(stan_psm_cv_year_list, stan_psm_cv_year_mods, file = "stan_psm_cv_year.RData")
 
 
 #---------------------------------------------------------------------
@@ -466,33 +504,33 @@ fit1 <- stan(file = "cohoPSM_SEM_Stan.stan",
              data = stan_dat, 
              init = stan_init,
              pars = names(stan_init()), 
-             chains = 3, iter = 10000, warmup = 5000, thin = 1, cores = 3,
-             control = list(adapt_delta = 0.8))
+             chains = 3, iter = 12000, warmup = 2000, thin = 5, cores = 3)
 
-stan_init_cv <- function()
+stan_init_cv <- function(fit)
 {
-  samples <- extract(fit1)
+  samples <- extract(fit)
   M <- nrow(samples$a0)
   i <- sample(M,1)
   
-  list(a0 = samples$a0[i,],
-       A_nid_vec = array(samples$A_nid_vec[i,], dim = ncol(samples$A_nid_vec)),
-       Z_nid = matrix(samples$Z[i,,], nrow = dim(samples$Z)[2], ncol = dim(samples$Z)[3]),
-       phi = samples$phi[i,],
-       mu_b0 = samples$mu_b0[i],
-       b0_Z_nid = array(samples$b0_Z_nid[i,], dim = ncol(samples$b0_Z_nid)),
-       sigma_b0 = samples$sigma_b0[i],
-       b0_std = array(samples$b0_std[i,], dim = ncol(samples$b0_std)),
-       mu_b_su = samples$mu_b_su[i],
-       b_su_Z_nid = array(samples$b_su_Z_nid[i,], dim = ncol(samples$b_su_Z_nid)),
-       sigma_b_su = samples$sigma_b_su[i],
-       b_su_std = array(samples$b_su_std[i,], dim = ncol(samples$b_su_std)),
-       mu_b_fa = samples$mu_b_fa[i],
-       b_fa_Z_nid = array(samples$b_fa_Z_nid[i,], dim = ncol(samples$b_fa_Z_nid)),
-       sigma_b_fa = samples$sigma_b_fa[i],
-       b_fa_std = array(samples$b_fa_std[i,], dim = ncol(samples$b_fa_std)),
-       sigma_psm = samples$sigma_psm[i],
-       logit_p_psm_std = array(samples$logit_p_psm_std[i,], dim = ncol(samples$logit_p_psm_std)))
+  with(samples,
+       list(a0 = a0[i,],
+            A_nid_vec = array(A_nid_vec[i,], dim = ncol(A_nid_vec)),
+            Z_nid = matrix(Z[i,,], nrow = dim(Z)[2], ncol = dim(Z)[3]),
+            phi = phi[i,],
+            mu_b0 = mu_b0[i],
+            b0_Z_nid = array(b0_Z_nid[i,], dim = ncol(b0_Z_nid)),
+            sigma_b0 = sigma_b0[i],
+            b0_std = array(b0_std[i,], dim = ncol(b0_std)),
+            mu_b_su = mu_b_su[i],
+            b_su_Z_nid = array(b_su_Z_nid[i,], dim = ncol(b_su_Z_nid)),
+            sigma_b_su = sigma_b_su[i],
+            b_su_std = array(b_su_std[i,], dim = ncol(b_su_std)),
+            mu_b_fa = mu_b_fa[i],
+            b_fa_Z_nid = array(b_fa_Z_nid[i,], dim = ncol(b_fa_Z_nid)),
+            sigma_b_fa = sigma_b_fa[i],
+            b_fa_std = array(b_fa_std[i,], dim = ncol(b_fa_std)),
+            sigma_psm = sigma_psm[i],
+            logit_p_psm_std = array(logit_p_psm_std[i,], dim = ncol(logit_p_psm_std))))
 }
 
 # Loop over candidate models and then over groups of sites, fit to data, 
@@ -523,13 +561,13 @@ for(i in 1:length(stan_psm_cv_site_list))
     cat("Working on model", i, "and hold-out group", j, "(see Viewer for progress) \n")
     fit <- stan(file = "cohoPSM_SEM_Stan.stan",
                 data = stan_dat_cv_site, 
-                init = lapply(1:3,function(x) stan_init_cv()),
+                init = lapply(1:3,function(i) stan_init_cv(fit1)),
                 pars = c("a0","A","Z","phi",
                          "mu_b0","b0_Z","sigma_b0","b0",
                          "mu_b_su","b_su_Z","sigma_b_su","b_su",
                          "mu_b_fa","b_fa_Z","sigma_b_fa","b_fa",
                          "sigma_psm","p_psm","ll_psm"), 
-                chains = 3, iter = 50000, warmup = 10000, thin = 40, cores = 3)
+                chains = 3, iter = 12000, warmup = 2000, thin = 5, cores = 3)
     
     # Store fitted object and log-likelihood matrix
     stan_psm_cv_site_list[[i]]$fit[[as.character(j)]] <- fit
@@ -561,6 +599,9 @@ for(i in 1:length(stan_psm_cv_site_list))
 }
 
 stan_psm_cv_site_mods
+
+# Save objects
+save(stan_psm_cv_site_list, stan_psm_cv_site_mods, file = "stan_psm_cv_site.RData")
 
 
 #---------------------------------------------------------
@@ -599,12 +640,12 @@ X3_all[X3_all==0] <- 1e-4
 X3_all <- sweep(X3_all, 2, apply(X3_all, 2, sd), "/")
 
 # reassemble all variables into matrix
-X_all <- cbind(X2_all,X1_all,X3_all)
+X_all <- cbind(X2_all, X1_all, X3_all)
 rm(list = c("X1_all","X2_all","X3_all"))
 
 # indices of covariates assumed to be normally (gamma) distributed
-normal_indx <- which(substring(dimnames(X_all)[[2]],1,4) %in% c("ccap","nlcd"))
-gamma_indx <- which(!(substring(dimnames(X_all)[[2]],1,4) %in% c("ccap","nlcd")))
+normal_indx <- grep("ccap|nlcd", colnames(X_all))
+gamma_indx <- which(!grepl("ccap|nlcd", colnames(X_all)))
 
 # Data for Stan
 stan_dat_all <- list(S = nrow(X_all), 
@@ -614,8 +655,8 @@ stan_dat_all <- list(S = nrow(X_all),
                      L = 1,  # user-specified!
                      N = nrow(psm_all), 
                      site = as.numeric(psm_all$site),
-                     ppt_su = as.vector(scale(psm_all$ppt_su/10, scale=F)),
-                     ppt_fa = as.vector(scale(psm_all$ppt_fa/10, scale=F)),
+                     ppt_su = array(as.vector(scale(psm_all$ppt_su/10, scale = FALSE)), dim = nrow(psm_all)),
+                     ppt_fa = array(as.vector(scale(psm_all$ppt_fa/10, scale = FALSE)), dim = nrow(psm_all)),
                      I0_Z = 1,
                      I_su = 1,
                      I_su_Z = 1,
@@ -628,50 +669,48 @@ stan_dat_all <- list(S = nrow(X_all),
 
 
 # Function to generate initial values for chains
-stan_init_all <- function() 
+stan_init_all <- function(stan_dat_all) 
 {
-  if(exists("stan_dat_all"))
-    for(i in names(stan_dat_all)) assign(i, stan_dat_all[[i]])
-  # X <- t(X)
-  D <- D_normal + D_gamma
-  
-  list(a0 = rnorm(D, c(colMeans(X[,1:D_normal]), colMeans(log(X[,-(1:D_normal)]))), 1),
-       A_nid_vec = array(rnorm(D*L - L*(L-1)/2, 0, 1), dim = D*L - L*(L-1)/2),
-       Z_nid = matrix(rnorm(S*L, 0, 1), nrow = S, ncol = L),
-       phi = runif(D, 0.5, 1),
-       mu_b0 = rnorm(1, -3, 1),
-       b0_Z_nid = array(rnorm(L, 1, 0.5), dim = L),
-       sigma_b0 = runif(1, 1, 2),
-       b0_std = array(rnorm(S, 0, 0.1), dim = S),
-       mu_b_su = rnorm(1, 0.3, 0.1),
-       b_su_Z_nid = array(rnorm(L, -0.2, 0.1), dim = L),
-       sigma_b_su = runif(1, 0.1, 1),
-       b_su_std = array(rnorm(S, 0, 0.1), dim = S),
-       mu_b_fa = rnorm(1, 0.03, 0.02),
-       b_fa_Z_nid = array(rnorm(L, -0.03, 0.02), dim = L),
-       sigma_b_fa = runif(1, 0.02, 0.1),
-       b_fa_std = array(rnorm(S, 0, 0.1), dim = S),
-       sigma_psm = runif(1, 0.5, 2),
-       logit_p_psm_std = array(rnorm(N, 0, 0.1), dim = N))
+  with(stan_dat_all, {
+    # X <- t(X)
+    D <- D_normal + D_gamma
+    
+    list(a0 = rnorm(D, c(colMeans(X[,1:D_normal]), colMeans(log(X[,-(1:D_normal)]))), 1),
+         A_nid_vec = array(rnorm(D*L - L*(L-1)/2, 0, 1), dim = D*L - L*(L-1)/2),
+         Z_nid = matrix(rnorm(S*L, 0, 1), nrow = S, ncol = L),
+         phi = runif(D, 0.5, 1),
+         mu_b0 = rnorm(1, -3, 1),
+         b0_Z_nid = array(rnorm(L, 1, 0.5), dim = L),
+         sigma_b0 = runif(1, 1, 2),
+         b0_std = array(rnorm(S, 0, 0.1), dim = S),
+         mu_b_su = rnorm(1, 0.3, 0.1),
+         b_su_Z_nid = array(rnorm(L, -0.2, 0.1), dim = L),
+         sigma_b_su = runif(1, 0.1, 1),
+         b_su_std = array(rnorm(S, 0, 0.1), dim = S),
+         mu_b_fa = rnorm(1, 0.03, 0.02),
+         b_fa_Z_nid = array(rnorm(L, -0.03, 0.02), dim = L),
+         sigma_b_fa = runif(1, 0.02, 0.1),
+         b_fa_std = array(rnorm(S, 0, 0.1), dim = S),
+         sigma_psm = runif(1, 0.5, 2),
+         logit_p_psm_std = array(rnorm(N, 0, 0.1), dim = N))
+  })
 }
 
 # Fit it!
 stan_psm_all <- stan(file = "cohoPSM_SEM_Stan.stan",
                      data = stan_dat_all, 
-                     init = stan_init_all,
+                     init = lapply(1:3, function(i) stan_init_all(stan_dat_all)),
                      pars = c("a0","A","Z","phi",
                               "mu_b0","b0_Z","sigma_b0",
                               "mu_b_su","b_su_Z","sigma_b_su",
                               "mu_b_fa","b_fa_Z","sigma_b_fa",
                               "sigma_psm","p_psm"), 
-                     chains = 3, iter = 50000, warmup = 10000, thin = 40, cores = 3,
-                     control = list(adapt_delta = 0.8))
+                     chains = 3, iter = 12000, warmup = 2000, thin = 5, cores = 3)
 
+
+# Print and explore fit in shinystan
 print(stan_psm_all, pars = c("p_psm","Z"), include = F)
-traceplot(stan_psm_all, pars = c("A","lp__"), inc_warmup = F)
-pairs(stan_psm_all, pars = c("a0[1]", "a0[2]", "A[1,1]", "A[2,1]", "Z[1,1]"), condition = "accept_stat__")
-pairs(stan_psm_all, pars = paste("A[", normal_indx, ",1]", sep=""), labels = colnames(X_all)[normal_indx])
-pairs(stan_psm_all, pars = paste("A[", gamma_indx, ",1]", sep=""), labels = colnames(X_all)[gamma_indx])
+launch_shinystan(stan_psm_all)
 
 # Store Z and predicted P(PSM) in matrix
 Z_all <- extract1(stan_psm_all,"Z")
@@ -688,8 +727,10 @@ psm_pre <- data.frame(site = site_names,
                       p_psm_up = apply(psm_pre, 2, quantile, 0.975),
                       logit_p_psm_mean = colMeans(qlogis(psm_pre)),
                       logit_p_psm_se = apply(qlogis(psm_pre), 2, sd))
+
+# Save objects
+save(stan_psm_all, psm_pre, file = "stan_psm_allbasins.RData")
 write.table(psm_pre, "PSM_predictions.txt", sep="\t", row.names=FALSE)
-rm(site_names)
 
 
 #==================================================================

@@ -3,7 +3,6 @@ data {
   int<lower=1> D_normal;         # dimension of normally distributed site-level covariates
   int<lower=1> D_gamma;          # dimension of gamma-distributed site-level covariates
   matrix[S,D_normal+D_gamma] X;  # site-level covariates: 1, ..., D_normal, ..., D_normal+D_gamma
-  # vector[S] X[D_normal+D_gamma];  # site-level covariates: 1, ..., D_normal, ..., D_normal+D_gamma
   int<lower=1> L;                # dimension of latent factor space (user-specified!)
   int<lower=1> N;                # number of PSM observations
   int<lower=0,upper=S> site[N];  # site index
@@ -24,32 +23,25 @@ transformed data {
   int<lower=1> D;                     # dimension of all site-level covariates
   matrix[S,D_normal] X_normal;        # normally distributed site-level covariates
   matrix[S,D_gamma] X_gamma;          # gamma-distributed site-level covariates
-  int<lower=0,upper=N> indx_fit[N];   # position index for obs used to fit the model
-  int<lower=0,upper=N> indx_lpd[N];   # position index for obs used to evaluate lpd
   int<lower=1,upper=N> which_fit[sum(I_fit)]; # which(I_fit == 1)
-  int<lower=1> n_fit[sum(I_fit)];     # number of females sampled: obs used to fit model
-  int<lower=0> n_psm_fit[sum(I_fit)]; # number of PSM females: obs used to fit model
-  vector<lower=1,upper=1>[S] ones_S;  # vector of ones
+  int<lower=1,upper=N> which_lpd[sum(I_lpd)]; # which(I_lpd == 1)
+  int<lower=0,upper=N> N_lpd;           # number of observations used to evaluate lpd
   
   D = D_normal + D_gamma;
   X_normal = block(X, 1, 1, S, D_normal);
-  X_gamma = block(X, 1, D_normal+1, S, D_gamma);
+  X_gamma = block(X, 1, D_normal + 1, S, D_gamma);
 
   # Extract PSM data that will be used to fit the model
   for(i in 1:N)
   {
-    indx_fit[i] = sum(head(I_fit, i));
-    indx_lpd[i] = sum(head(I_lpd, i));
-
     if(I_fit[i] == 1)
-    {
-      which_fit[indx_fit[i]] = i;
-      n_fit[indx_fit[i]] = n[i];
-      n_psm_fit[indx_fit[i]] = n_psm[i];
-    }
+      which_fit[sum(head(I_fit, i))] = i;
+    
+    if(I_lpd[i] == 1)
+      which_lpd[sum(head(I_lpd, i))] = i;
   }
   
-  ones_S = rep_vector(1, S);
+  N_lpd = sum(I_lpd);
 }
 
 parameters {
@@ -98,7 +90,7 @@ transformed parameters {
   }
   
   # Calculate linear predictor matrix of X on link scale
-  g_mu_X = ones_S*a0 + Z_nid*transpose(A_nid);
+  g_mu_X = rep_matrix(a0,S) + Z_nid*transpose(A_nid);
   
   # Shift and rescale site-level random regression coefs
   # Indicator variables (read in as data) control which coefs are
@@ -108,14 +100,11 @@ transformed parameters {
   b_fa = I_fa*(mu_b_fa + I_fa_Z*Z_nid*b_fa_Z_nid + sigma_b_fa*b_fa_std);
   
   # Calculate predicted P(PSM), including observation-level random residuals
-  for(i in 1:N)
-    logit_p_psm_hat[i] = b0[site[i]] + b_su[site[i]]*ppt_su[i] + b_fa[site[i]]*ppt_fa[i];
+  logit_p_psm_hat = b0[site] + b_su[site] .* ppt_su + b_fa[site] .* ppt_fa;
   logit_p_psm = logit_p_psm_hat + sigma_psm*logit_p_psm_std;
 }
 
 model {
-  vector[max(indx_fit)] logit_p_psm_fit; # logit P(PSM), for data used to fit the model
-  
   # Priors
   a0 ~ normal(0,10);
   A_nid_vec ~ normal(0,10);
@@ -144,24 +133,12 @@ model {
     matrix[S,D_gamma] inv_mu_X_gamma;
     
     phi_gamma = rep_matrix(tail(phi, D_gamma), S);
-    inv_mu_X_gamma = exp(-block(g_mu_X, 1, D_normal+1, S, D_gamma));
+    inv_mu_X_gamma = exp(-block(g_mu_X, 1, D_normal + 1, S, D_gamma));
     to_vector(X_gamma) ~ gamma(to_vector(phi_gamma), to_vector(phi_gamma .* inv_mu_X_gamma));
   }
-  #   for(j in 1:D_normal)
-  #     X[j] ~ normal(col(g_mu_X, j), phi[j]); 
-  #   
-  #   for(j in (D_normal+1):D)
-  #     X[j] ~ gamma(phi[j], phi[j]*exp(-col(g_mu_X, j)));
-  
+
   # Likelihood of observed PSM conditional on obs-level random errors
-  #   for(i in 1:N)
-  #   {
-  #     if(I_fit[i] == 1)
-  #       logit_p_psm_fit[indx_fit[i]] = logit_p_psm[i]; # predictions used to fit model
-  #   }
-  for(i in 1:size(which_fit))
-    logit_p_psm_fit[i] = logit_p_psm[which_fit[i]]; # predictions used to fit model
-  n_psm_fit ~ binomial_logit(n_fit, logit_p_psm_fit);
+  n_psm[which_fit] ~ binomial_logit(n[which_fit], logit_p_psm[which_fit]);
 }
 
 generated quantities {
@@ -173,8 +150,8 @@ generated quantities {
   vector[L] b_fa_Z;       # effects of Z on site-level fall precip slope (identified)
   vector[N] p_psm;        # predicted P(PSM)
   int N_MC;               # sample size for Monte Carlo estimate of marginal likelihood
-  vector[max(max(indx_lpd),1)] ll_psm; # pointwise marginal log-likelihood of PSM obs
-  
+  vector[N_lpd] ll_psm;   # pointwise marginal log-likelihood of PSM obs
+
   # Reflect factors and loadings to ensure identifiability
   # Identified loading matrix A has A[1:L,1:L] lower triangular with positive diagonal
   for(j in 1:L)
@@ -194,24 +171,19 @@ generated quantities {
   # Marginal likelihood is approximated by Monte Carlo integration over the
   # observation-level random residuals
   N_MC = 1000;  # hard-coded
-  if(max(indx_lpd) > 0)
+  ll_psm = rep_vector(0,N_lpd);
+  for(i in 1:N_lpd)  # will only execute if N_lpd > 0
   {
-    ll_psm = rep_vector(0, max(max(indx_lpd),1));
-    for(i in 1:N)
+    vector[N_MC] ll_psm_MC;
+    
+    for(j in 1:N_MC)
     {
-      if(I_lpd[i] == 1)
-      {
-        vector[N_MC] ll_psm_MC;
-        real logit_p_psm_MC;
-        
-        for(j in 1:N_MC)
-        {
-          logit_p_psm_MC = normal_rng(logit_p_psm_hat[i], sigma_psm);
-          ll_psm_MC[j] = binomial_logit_lpmf(n_psm[i] | n[i], logit_p_psm_MC);
-        }
-        
-        ll_psm[indx_lpd[i]] = log_sum_exp(ll_psm_MC) - log(N_MC);
-      }
+      real logit_p_psm_MC;
+      
+      logit_p_psm_MC = normal_rng(logit_p_psm_hat[which_lpd[i]], sigma_psm);
+      ll_psm_MC[j] = binomial_logit_lpmf(n_psm[which_lpd[i]] | n[which_lpd[i]], logit_p_psm_MC);
     }
+    
+    ll_psm[i] = log_sum_exp(ll_psm_MC) - log(N_MC);
   }
 }
