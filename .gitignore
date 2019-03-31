@@ -4,6 +4,6 @@
 **/*.RData
 .Ruserdata
 .Rproj.user
-data/bcmatUW2002.txt
-data/bcmatParcel.txt
-data/bcmatRoad.txt
+data/old/bcmatUW2002.txt
+data/old/bcmatParcel.txt
+data/old/bcmatRoad.txt
