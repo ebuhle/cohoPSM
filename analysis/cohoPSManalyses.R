@@ -1,6 +1,6 @@
 setwd(file.path("~","cohoPSM","analysis"))
 data_path <- file.path("~","cohoPSM","data")
-options(device=windows)
+if(.Platform$OS.type == "windows") options(device=windows)
 library(rstan)
 library(loo)
 library(shinystan)
@@ -131,11 +131,11 @@ newdat <- psm_all_reg[psm_all_reg$data == "psm",]
 newdat <- data.frame(idx = rep(1:nrow(newdat), each = 500), 
                      newdat[rep(1:nrow(newdat), each = 500),])
 newdat$ID <- max(newdat$ID) + 1:nrow(newdat)
+### WTF? posterior_linpred() ignores ID-level intercept (but works with toy example)
 ll_glmm_psm <- t(posterior_linpred(glmm_psm, newdata = newdat, transform = TRUE))
 ll_glmm_psm <- apply(ll_glmm_psm, 1, function(p) dbinom(newdat$n_psm, newdat$n, p))
 ll_glmm_psm <- aggregate(ll_glmm_psm, by = list(idx = newdat$idx), mean)
 
-###
 ### just for kicks
 load("stan_psm.RData")  # saved stanfit object from next code chunk below
 psm_all_reg$Z[psm_all_reg$data == "psm"] <- stan_mean(stan_psm,"Z")[as.numeric(psm$site)]
@@ -266,7 +266,7 @@ print(stan_psm, prob = c(0.025, 0.5, 0.975), pars = c("g_mu_X","ll_psm","Z"), in
 launch_shinystan(stan_psm)
 
 # Save stanfit
-save(stan_psm, file = "stan_psm.RData")
+save(stan_psm, file = file.path("results","stan_psm.RData"))
 
 #------------------------------------------------------------------
 # In-sample model selection:
@@ -344,7 +344,7 @@ stan_psm_mods <- stan_psm_mods[order(stan_psm_mods$dLOO),]
 stan_psm_mods[order(stan_psm_mods$dWAIC),]
 
 # Save objects
-save(stan_psm_list, stan_psm_mods, file = "stan_psm_WAIC_LOO.RData")
+save(stan_psm_list, stan_psm_mods, file = file.path("results","stan_psm_WAIC_LOO.RData"))
 
 
 #---------------------------------------------------------------------
@@ -460,7 +460,7 @@ for(i in 1:length(stan_psm_cv_year_list))
 stan_psm_cv_year_mods
 
 # Save objects
-save(stan_psm_cv_year_list, stan_psm_cv_year_mods, file = "stan_psm_cv_year.RData")
+save(stan_psm_cv_year_list, stan_psm_cv_year_mods, file = file.path("results","stan_psm_cv_year.RData"))
 
 
 #---------------------------------------------------------------------
@@ -612,7 +612,7 @@ for(i in 1:length(stan_psm_cv_site_list))
 stan_psm_cv_site_mods
 
 # Save objects
-save(stan_psm_cv_site_list, stan_psm_cv_site_mods, file = "stan_psm_cv_site.RData")
+save(stan_psm_cv_site_list, stan_psm_cv_site_mods, file = file.path("results","stan_psm_cv_site.RData"))
 
 
 #---------------------------------------------------------
@@ -740,43 +740,20 @@ psm_pre <- data.frame(site = site_names,
                       logit_p_psm_se = apply(qlogis(psm_pre), 2, sd))
 
 # Save objects
-save(stan_psm_all, psm_pre, file = "stan_psm_allbasins.RData")
-write.table(psm_pre, "PSM_predictions.txt", sep="\t", row.names=FALSE)
+save(stan_psm_all, psm_pre, file = file.path("results","stan_psm_allbasins.RData"))
+write.table(psm_pre, file.path("results","PSM_predictions.txt"), sep="\t", row.names=FALSE)
 
 
 #==================================================================
 # FIGURES
 #==================================================================
 
-# #-----------------------------------------
-# # Posteriors of loadings
-# #-----------------------------------------
-# 
-# dev.new(width=10, height=10)
-# # png(filename="loadings.png", width=7, height=7, units = "in", res=300, type="cairo-png")
-# par(mar=c(5.1,9.5,2.1,2.1))
-# 
-# A <- extract1(stan_psm, "A")[,,1]  
-# bxp_dat <- boxplot(A, plot=F)
-# bxp_dat$stats[3,] <- colMeans(A)
-# bxp_dat$stats[c(2,4),] <- apply(A,2,quantile,c(0.05,0.95))
-# bxp_dat$stats[c(1,5),] <- apply(A,2,quantile,c(0.025,0.975))
-# 
-# bxp(bxp_dat, xlab="Factor loading", ylab="", ylim=range(bxp_dat$stats), yaxt="n", 
-#     horizontal=T, boxwex=0.4, outpch="", whisklty=1, staplewex = 0, 
-#     las=1, cex.axis=1.2, cex.lab=1.5)
-# axis(2, at=1:ncol(A), las=1, cex.axis=1.2,
-#      labels=lulc_roads_labels$plot_label[match(colnames(X), lulc_roads_labels$data.label)])
-# abline(v=0, lwd=1, lty=2)
-# rm(A);rm(bxp_dat)
-# # dev.off()
-
 #-----------------------------------------
 # Posteriors of loadings
 #-----------------------------------------
 
 dev.new(width=10, height=10)
-# png(filename="loadings.png", width=10, height=10, units = "in", res=300, type="cairo-png")
+# png(filename=file.path("resutls","loadings.png"), width=10, height=10, units = "in", res=300, type="cairo-png")
 par(mfcol=c(2,1), mar=c(1,14,2.1,2.1), oma=c(3.5,0,0,0))
 
 gamma_labels <- lulc_roads_labels$plot_label[match(colnames(X)[gamma_indx], lulc_roads_labels$data.label)]
@@ -816,7 +793,7 @@ rm(A);rm(bxp_dat);rm(gamma_labels);rm(normal_labels)
 #---------------------------------------------------------
 
 dev.new(width=10, height=10)
-# png(filename="PSM_obs_vs_fit.png", width=10, height=10, units="in", res=300, type="cairo-png")
+# png(filename=file.path("results","PSM_obs_vs_fit.png"), width=10, height=10, units="in", res=300, type="cairo-png")
 par(mar=c(5.1,4.5,4.1,2.1))
 
 cc <- col2rgb("darkgray")
@@ -843,7 +820,7 @@ rm(cc);rm(lgd)
 #----------------------------------------------------------------------------------------------
 
 dev.new(width=7,height=15)
-# png(filename="psm_site-level_regressions.png", width=7*0.75, height=15*0.75, units="in", res=300, type="cairo-png")
+# png(filename=file.path("results","psm_site-level_regressions.png"), width=7*0.75, height=15*0.75, units="in", res=300, type="cairo-png")
 par(mfcol=c(3,1), mar=c(1.1,7,3,1.1), oma=c(4,0,0,0))
 
 mod <- stan_psm_list[["ZZZ"]]$fit
@@ -982,7 +959,7 @@ dimnames(X_plot)[[2]] <- lulc_roads_labels$plot_label[match(dimnames(X)[[2]], lu
 R <- cor(X_plot)
 
 dev.new(width = 10, height = 10, mar = c(1,1,1,1))
-png(filename="landscape_corrplot_ugly.png", width=10*0.9, height=10*0.9, units="in", res=200, type="cairo-png")
+png(filename=file.path("results","landscape_corrplot_ugly.png"), width=10*0.9, height=10*0.9, units="in", res=200, type="cairo-png")
 # corrplot(R, diag = F, method = "ellipse", order = "original", 
 #          col = c1, tl.col = "black", tl.cex = 1.2) 
 corrplot(R, diag = T, method = "color", order = "original",
