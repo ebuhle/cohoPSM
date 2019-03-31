@@ -251,7 +251,7 @@ stan_init <- function(stan_dat)
 }
 
 # Fit it!
-stan_psm <- stan(file = "cohoPSM_SEM_Stan.stan",
+stan_psm <- stan(file = "cohoPSM_SEM.stan",
                  data = stan_dat, 
                  init = lapply(1:3, function(i) stan_init(stan_dat)),
                  pars = c("a0","A","Z","phi","g_mu_X",
@@ -299,7 +299,7 @@ for(i in 1:length(stan_psm_list))
   
   # Fit model
   cat("Working on model", i, "(see Viewer for progress) \n")
-  fit <- stan(file = "cohoPSM_SEM_Stan.stan",
+  fit <- stan(file = "cohoPSM_SEM.stan",
               data = stan_dat, 
               init = stan_init,
               pars = c("a0","A","Z","phi",
@@ -360,7 +360,7 @@ names(stan_psm_cv_year_list) <- c("100","1Z0","ZZ1","ZZZ")
 
 # Fit "full" model to complete data once to generate good starting values
 # for leave-one-out runs
-fit1 <- stan(file = "cohoPSM_SEM_Stan.stan",
+fit1 <- stan(file = "cohoPSM_SEM.stan",
              data = stan_dat, 
              init = stan_init,
              pars = names(stan_init()), 
@@ -418,7 +418,7 @@ for(i in 1:length(stan_psm_cv_year_list))
     
     # Fit model
     cat("Working on model", i, "and hold-out year", j, "(see Viewer for progress) \n")
-    fit <- stan(file = "cohoPSM_SEM_Stan.stan",
+    fit <- stan(file = "cohoPSM_SEM.stan",
                 data = stan_dat_cv_year, 
                 init = lapply(1:3,function(i) stan_init_cv(fit1)),
                 pars = c("a0","A","Z","phi",
@@ -511,7 +511,7 @@ names(stan_psm_cv_site_list) <- c("100","1Z0","ZZ1","ZZZ")
 
 # Fit "full" model to complete data once to generate good starting values
 # for leave-one-out runs
-fit1 <- stan(file = "cohoPSM_SEM_Stan.stan",
+fit1 <- stan(file = "cohoPSM_SEM.stan",
              data = stan_dat, 
              init = stan_init,
              pars = names(stan_init()), 
@@ -570,7 +570,7 @@ for(i in 1:length(stan_psm_cv_site_list))
     
     # Fit model
     cat("Working on model", i, "and hold-out group", j, "(see Viewer for progress) \n")
-    fit <- stan(file = "cohoPSM_SEM_Stan.stan",
+    fit <- stan(file = "cohoPSM_SEM.stan",
                 data = stan_dat_cv_site, 
                 init = lapply(1:3,function(i) stan_init_cv(fit1)),
                 pars = c("a0","A","Z","phi",
@@ -708,7 +708,7 @@ stan_init_all <- function(stan_dat_all)
 }
 
 # Fit it!
-stan_psm_all <- stan(file = "cohoPSM_SEM_Stan.stan",
+stan_psm_all <- stan(file = "cohoPSM_SEM.stan",
                      data = stan_dat_all, 
                      init = lapply(1:3, function(i) stan_init_all(stan_dat_all)),
                      pars = c("a0","A","Z","phi",
