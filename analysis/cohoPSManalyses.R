@@ -137,7 +137,7 @@ ll_glmm_psm <- apply(ll_glmm_psm, 1, function(p) dbinom(newdat$n_psm, newdat$n, 
 ll_glmm_psm <- aggregate(ll_glmm_psm, by = list(idx = newdat$idx), mean)
 
 ### just for kicks
-load("stan_psm.RData")  # saved stanfit object from next code chunk below
+load(file.path("results","stan_psm.RData"))  # saved stanfit object from next code chunk below
 psm_all_reg$Z[psm_all_reg$data == "psm"] <- stan_mean(stan_psm,"Z")[as.numeric(psm$site)]
 
 glmm_psm_Z <- stan_glmer(cbind(n_psm, n - n_psm) ~ (ppt_su + ppt_fa) * Z + 
