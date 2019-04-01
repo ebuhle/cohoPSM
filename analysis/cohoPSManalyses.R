@@ -826,6 +826,7 @@ par(mfcol=c(3,1), mar=c(1.1,7,3,1.1), oma=c(4,0,0,0))
 mod <- stan_psm_list[["ZZZ"]]$fit
 site <- as.numeric(psm$site)
 
+# intercept                     
 plot(stan_mean(mod,"Z"), stan_mean(mod,"b0"), pch="", las=1, cex.lab=2.2, cex.axis=1.8,
      xlim=range(summary(mod, "Z", probs = c(0.025,0.975))$summary[,c("2.5%","97.5%")]),
      ylim=range(summary(mod, "b0", probs = c(0.025,0.975))$summary[,c("2.5%","97.5%")]),
@@ -850,6 +851,7 @@ legend("topleft", legend = "", title = "A", cex=2.2, bty="n")
 legend("bottomright", legend=c("1","2","5","10"), title="N years", cex = 1.5,
        y.intersp=1, bty = "n", pch=18, pt.cex=1.5*log(c(1,2,5,10) + 1))
 
+# summer precip effect
 plot(stan_mean(mod,"Z"), stan_mean(mod,"b_su"), pch="", las=1, cex.lab=2.2, cex.axis=1.8,
      xlim=range(summary(mod, "Z", probs = c(0.025,0.975))$summary[,c("2.5%","97.5%")]),
      ylim=range(summary(mod, "b_su", probs = c(0.025,0.975))$summary[,c("2.5%","97.5%")]),
@@ -872,6 +874,7 @@ segments(summary(mod, "Z", probs = 0.025)$summary[,"2.5%"], stan_mean(mod,"b_su"
 mtext(expression("Summer rain effect (cm" * {}^-1 * ")"), side=2, line=4.5, cex=2.2*par()$cex)
 legend("topleft", legend = "", title = "B", cex=2.2, bty="n")
 
+# fall precip effect
 plot(stan_mean(mod,"Z"), stan_mean(mod,"b_fa"), pch="", las=1, cex.lab=2.2, cex.axis=1.8,
      xlim=range(summary(mod, "Z", probs = c(0.025,0.975))$summary[,c("2.5%","97.5%")]),
      ylim=range(summary(mod, "b_fa", probs = c(0.025,0.975))$summary[,c("2.5%","97.5%")]),
