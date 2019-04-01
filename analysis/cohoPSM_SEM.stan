@@ -25,7 +25,7 @@ transformed data {
   matrix[S,D_gamma] X_gamma;          // gamma-distributed site-level covariates
   int<lower=1,upper=N> which_fit[sum(I_fit)]; // which(I_fit == 1)
   int<lower=1,upper=N> which_lpd[sum(I_lpd)]; // which(I_lpd == 1)
-  int<lower=0,upper=N> N_lpd;           // number of observations used to evaluate lpd
+  int<lower=0,upper=N> N_lpd;         // number of observations used to evaluate lpd
   
   D = D_normal + D_gamma;
   X_normal = block(X, 1, 1, S, D_normal);
