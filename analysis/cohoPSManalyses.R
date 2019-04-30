@@ -1,5 +1,3 @@
-setwd(file.path("~","cohoPSM","analysis"))
-data_path <- file.path("~","cohoPSM","data")
 if(.Platform$OS.type == "windows") options(device=windows)
 library(rstan)
 library(loo)
@@ -7,8 +5,9 @@ library(shinystan)
 library(rstanarm)
 library(Hmisc)
 library(corrplot)
-source("stan_mean.R")
-source("extract1.R")
+library(here)
+source(here("analysis","stan_mean.R"))
+source(here("analysis","extract1.R"))
 
 #==================================================================
 # DATA
@@ -19,10 +18,10 @@ source("extract1.R")
 #----------------------------------------------
 
 # read in spawner data
-spawner_data <- read.csv(file.path(data_path,"spawner_data.csv"), header=T)
+spawner_data <- read.csv(here("data","spawner_data.csv"), header=T)
 
 # read in landscape data
-spatial_data <- read.csv(file.path(data_path,"spatial_data.csv"), header=T)
+spatial_data <- read.csv(here("data","spatial_data.csv"), header=T)
 
 # LU/LC and roads data
 lulc_roads_data <- spatial_data[,c("site","watershed","area","ccap_decid","ccap_open","ccap_evgrn",
@@ -37,7 +36,7 @@ lulc_roads_data$area <- lulc_roads_data$area/1e4
 lulc_roads_data[,grep("roads", names(lulc_roads_data))] <- lulc_roads_data[,grep("roads", names(lulc_roads_data))]/1000
 
 # Pretty variable names for LU/LC and roads
-lulc_roads_labels <- read.csv(file.path(data_path,"lulc_roads_labels.csv"), header=T)
+lulc_roads_labels <- read.csv(here("data","lulc_roads_labels.csv"), header=T)
 lulc_roads_labels$plot_label <- ordered(as.character(lulc_roads_labels$plot_label),
                                         levels = c("Imperviousness","High developed","Medium developed",
                                                    "Low developed","Evergreen","Deciduous","Mixed forest",
@@ -70,7 +69,7 @@ psm <- psm[order(psm$site,psm$year),]
 #----------------------------------------------
 
 # read in landscape data
-spatial_data_pre <- read.csv(file.path(data_path,"spatial_data_predict.csv"), header=T)
+spatial_data_pre <- read.csv(here("data","spatial_data_predict.csv"), header=T)
 names(spatial_data_pre) <- gsub("ID", "site", names(spatial_data_pre))
 spatial_data_pre$watershed <- NA
 
@@ -107,8 +106,7 @@ psm_all <- data.frame(ID = 1:nrow(psm_all), psm_all)
 
 # Modify dataset
 # precip, traffic and log(traffic) centered and scaled to SD = 1
-psm_all_reg <- psm_all
-psm_all_reg <- transform(psm_all_reg, ppt_su = scale(ppt_su), ppt_fa = scale(ppt_fa),
+psm_all_reg <- transform(psm_all, ppt_su = scale(ppt_su), ppt_fa = scale(ppt_fa),
                          traffic = scale(traffic), log_traffic = scale(log(pmax(traffic, 0.1))))
 
 # Fit full model
@@ -137,7 +135,7 @@ ll_glmm_psm <- apply(ll_glmm_psm, 1, function(p) dbinom(newdat$n_psm, newdat$n, 
 ll_glmm_psm <- aggregate(ll_glmm_psm, by = list(idx = newdat$idx), mean)
 
 ### just for kicks
-load(file.path("results","stan_psm.RData"))  # saved stanfit object from next code chunk below
+load(here("results","stan_psm.RData"))  # saved stanfit object from next code chunk below
 psm_all_reg$Z[psm_all_reg$data == "psm"] <- stan_mean(stan_psm,"Z")[as.numeric(psm$site)]
 
 glmm_psm_Z <- stan_glmer(cbind(n_psm, n - n_psm) ~ (ppt_su + ppt_fa) * Z + 
@@ -266,7 +264,7 @@ print(stan_psm, prob = c(0.025, 0.5, 0.975), pars = c("g_mu_X","ll_psm","Z"), in
 launch_shinystan(stan_psm)
 
 # Save stanfit
-save(stan_psm, file = file.path("results","stan_psm.RData"))
+save(stan_psm, file = here("results","stan_psm.RData"))
 
 #------------------------------------------------------------------
 # In-sample model selection:
@@ -344,7 +342,7 @@ stan_psm_mods <- stan_psm_mods[order(stan_psm_mods$dLOO),]
 stan_psm_mods[order(stan_psm_mods$dWAIC),]
 
 # Save objects
-save(stan_psm_list, stan_psm_mods, file = file.path("results","stan_psm_WAIC_LOO.RData"))
+save(stan_psm_list, stan_psm_mods, file = here("results","stan_psm_WAIC_LOO.RData"))
 
 
 #---------------------------------------------------------------------
@@ -460,7 +458,7 @@ for(i in 1:length(stan_psm_cv_year_list))
 stan_psm_cv_year_mods
 
 # Save objects
-save(stan_psm_cv_year_list, stan_psm_cv_year_mods, file = file.path("results","stan_psm_cv_year.RData"))
+save(stan_psm_cv_year_list, stan_psm_cv_year_mods, file = here("results","stan_psm_cv_year.RData"))
 
 
 #---------------------------------------------------------------------
@@ -612,7 +610,7 @@ for(i in 1:length(stan_psm_cv_site_list))
 stan_psm_cv_site_mods
 
 # Save objects
-save(stan_psm_cv_site_list, stan_psm_cv_site_mods, file = file.path("results","stan_psm_cv_site.RData"))
+save(stan_psm_cv_site_list, stan_psm_cv_site_mods, file = here("results","stan_psm_cv_site.RData"))
 
 
 #---------------------------------------------------------
@@ -740,8 +738,8 @@ psm_pre <- data.frame(site = site_names,
                       logit_p_psm_se = apply(qlogis(psm_pre), 2, sd))
 
 # Save objects
-save(stan_psm_all, psm_pre, file = file.path("results","stan_psm_allbasins.RData"))
-write.table(psm_pre, file.path("results","PSM_predictions.txt"), sep="\t", row.names=FALSE)
+save(stan_psm_all, psm_pre, file = here("results","stan_psm_allbasins.RData"))
+write.table(psm_pre, here("results","PSM_predictions.txt"), sep="\t", row.names=FALSE)
 
 
 #==================================================================
@@ -753,7 +751,7 @@ write.table(psm_pre, file.path("results","PSM_predictions.txt"), sep="\t", row.n
 #-----------------------------------------
 
 dev.new(width=10, height=10)
-# png(filename=file.path("resutls","loadings.png"), width=10, height=10, units = "in", res=300, type="cairo-png")
+# png(filename=here("results","loadings.png"), width=10, height=10, units = "in", res=300, type="cairo-png")
 par(mfcol=c(2,1), mar=c(1,14,2.1,2.1), oma=c(3.5,0,0,0))
 
 gamma_labels <- lulc_roads_labels$plot_label[match(colnames(X)[gamma_indx], lulc_roads_labels$data.label)]
@@ -793,7 +791,7 @@ rm(A);rm(bxp_dat);rm(gamma_labels);rm(normal_labels)
 #---------------------------------------------------------
 
 dev.new(width=10, height=10)
-# png(filename=file.path("results","PSM_obs_vs_fit.png"), width=10, height=10, units="in", res=300, type="cairo-png")
+# png(filename=here("results","PSM_obs_vs_fit.png"), width=10, height=10, units="in", res=300, type="cairo-png")
 par(mar=c(5.1,4.5,4.1,2.1))
 
 cc <- col2rgb("darkgray")
@@ -820,7 +818,7 @@ rm(cc);rm(lgd)
 #----------------------------------------------------------------------------------------------
 
 dev.new(width=7,height=15)
-# png(filename=file.path("results","psm_site-level_regressions.png"), width=7*0.75, height=15*0.75, units="in", res=300, type="cairo-png")
+# png(filename=here("results","psm_site-level_regressions.png"), width=7*0.75, height=15*0.75, units="in", res=300, type="cairo-png")
 par(mfcol=c(3,1), mar=c(1.1,7,3,1.1), oma=c(4,0,0,0))
 
 mod <- stan_psm_list[["ZZZ"]]$fit
@@ -962,7 +960,7 @@ dimnames(X_plot)[[2]] <- lulc_roads_labels$plot_label[match(dimnames(X)[[2]], lu
 R <- cor(X_plot)
 
 dev.new(width = 10, height = 10, mar = c(1,1,1,1))
-png(filename=file.path("results","landscape_corrplot_ugly.png"), width=10*0.9, height=10*0.9, units="in", res=200, type="cairo-png")
+png(filename=here("results","landscape_corrplot_ugly.png"), width=10*0.9, height=10*0.9, units="in", res=200, type="cairo-png")
 # corrplot(R, diag = F, method = "ellipse", order = "original", 
 #          col = c1, tl.col = "black", tl.cex = 1.2) 
 corrplot(R, diag = T, method = "color", order = "original",
