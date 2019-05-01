@@ -7,6 +7,7 @@ library(here)
 #----------------------------------------------
 # PSM SAMPLING SITES FOR ANALYSIS
 #----------------------------------------------
+## @knitr data_psm_sites
 
 # read in spawner data
 spawner_data <- read.csv(here("data","spawner_data.csv"), header=T)
@@ -55,9 +56,11 @@ psm <- merge(psm, lulc_roads_data, by = "site")
 psm <- data.frame(psm[,c("site","watershed","year","n","n_psm","ppt_su","ppt_fa","area")], psm[,-(1:9)])
 psm <- psm[order(psm$site,psm$year),]
 
+## @ knitr unused
 #----------------------------------------------
 # ADDITIONAL SITES FOR PSM PREDICTIONS
 #----------------------------------------------
+## @ knitr data_predict_sites
 
 # read in landscape data
 spatial_data_pre <- read.csv(here("data","spatial_data_predict.csv"), header=T)
