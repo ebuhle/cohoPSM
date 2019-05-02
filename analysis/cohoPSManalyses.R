@@ -20,9 +20,11 @@ source("extract1.R")
 
 # read in spawner data
 spawner_data <- read.csv(file.path(data_path,"spawner_data.csv"), header=T)
-
+spawner_data <- read.csv("data/spawner_data.csv", header=T)
+#
 # read in landscape data
 spatial_data <- read.csv(file.path(data_path,"spatial_data.csv"), header=T)
+spatial_data <- read.csv("data/spatial_data.csv", header=T)
 
 # LU/LC and roads data
 lulc_roads_data <- spatial_data[,c("site","watershed","area","ccap_decid","ccap_open","ccap_evgrn",
@@ -38,6 +40,8 @@ lulc_roads_data[,grep("roads", names(lulc_roads_data))] <- lulc_roads_data[,grep
 
 # Pretty variable names for LU/LC and roads
 lulc_roads_labels <- read.csv(file.path(data_path,"lulc_roads_labels.csv"), header=T)
+lulc_roads_labels <- read.csv("data/lulc_roads_labels.csv", header=T)
+
 lulc_roads_labels$plot_label <- ordered(as.character(lulc_roads_labels$plot_label),
                                         levels = c("Imperviousness","High developed","Medium developed",
                                                    "Low developed","Evergreen","Deciduous","Mixed forest",
@@ -71,6 +75,8 @@ psm <- psm[order(psm$site,psm$year),]
 
 # read in landscape data
 spatial_data_pre <- read.csv(file.path(data_path,"spatial_data_predict.csv"), header=T)
+spatial_data_pre <- read.csv("data/spatial_data_predict.csv", header=T)
+
 names(spatial_data_pre) <- gsub("ID", "site", names(spatial_data_pre))
 spatial_data_pre$watershed <- NA
 
