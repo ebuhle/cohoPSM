@@ -7,3 +7,5 @@
 data/old/bcmatUW2002.txt
 data/old/bcmatParcel.txt
 data/old/bcmatRoad.txt
+.DS_Store
+analysis/cohoPSManalyses_AE.R
