@@ -266,14 +266,14 @@ stan_init_cv <- function(fit)
   M <- nrow(samples$a0)
   i <- sample(M,1)
   
-  A <- matrix(samples$A[i,,], nrow = dim(samples$A)[2], ncol = dim(samples$A)[3], byrow = TRUE)
-  A <- A[lower.tri(A), diag = TRUE]
+  AA <- matrix(samples$A[i,,], nrow = dim(samples$A)[2], ncol = dim(samples$A)[3], byrow = TRUE)
+  AA <- AA[lower.tri(AA), diag = TRUE]
   logit_p_psm_hat <- stan_mean(fit,"logit_p_psm_hat")
   logit_p_psm <- qlogis(samples$p_psm[i,])
 
   with(samples, 
        list(a0 = a0[i,],
-            A_nid_vec = array(A, dim = length(A)),
+            A_nid_vec = array(AA, dim = length(AA)),
             Z_nid = matrix(Z[i,,], nrow = dim(Z)[2], ncol = dim(Z)[3], byrow = TRUE),
             phi = phi[i,],
             mu_b0 = mu_b0[i],
