@@ -198,7 +198,7 @@ for(i in 1:length(stan_psm_list))
   stan_dat$I_fa_Z <- as.numeric(substring(names(stan_psm_list)[i],3,3) == "Z")
   
   # Fit model
-  cat(rep("*",i), rep(".", length(stan_psm_list) - i), " Working on model ", i, "/", 
+  cat("|", rep("*",i), rep(" ", length(stan_psm_list) - i), "| Working on model ", i, "/", 
       length(stan_psm_list), " (see Viewer for progress) \n\n", sep = "")
   
   fit <- stan(file = here("analysis","cohoPSM_SEM.stan"),
