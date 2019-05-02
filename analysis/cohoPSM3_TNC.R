@@ -1,14 +1,21 @@
+## @knitr setup_tnc
 if(.Platform$OS.type == "windows") options(device=windows)
 library(rstan)
 library(loo)
 library(shinystan)
 library(rstanarm)
 library(Hmisc)
-library(corrplot)
 library(here)
 source(here("analysis","stan_mean.R"))
 source(here("analysis","extract1.R"))
 source(here("analysis","cohoPSM1_data.R"))  # read and wrangle data
+# load previously saved stanfit object containing "full" SEM
+# and don't re-evaluate that code chunk
+if(file.exists(here("analysis","results","stan_psm.RData"))) {
+  load(here("analysis","results","stan_psm.RData"))
+  eval_stan_psm <- FALSE
+}
+## @knitr ignore
 
 
 #==================================================================
@@ -17,10 +24,12 @@ source(here("analysis","cohoPSM1_data.R"))  # read and wrangle data
 
 # Modify dataset
 # precip, traffic and log(traffic) centered and scaled to SD = 1
+## @knitr data_psm_glmm
 psm_all_reg <- transform(psm_all, ppt_su = scale(ppt_su), ppt_fa = scale(ppt_fa),
                          traffic = scale(traffic), log_traffic = scale(log(pmax(traffic, 0.1))))
 
 # Fit full model
+## @knitr fit_psm_glmm
 glmm_psm <- stan_glmer(cbind(n_psm, n - n_psm) ~ (ppt_su + ppt_fa) * log_traffic + 
                          (ppt_su + ppt_fa || site) + (1 | ID),
                        data = psm_all_reg, subset = data == "psm",
@@ -31,8 +40,8 @@ glmm_psm <- stan_glmer(cbind(n_psm, n - n_psm) ~ (ppt_su + ppt_fa) * log_traffic
                        chains = 3, cores = 3, iter = 2000, warmup = 1000,
                        control = list(adapt_delta = 0.9))
 
-glmm_psm
-summary(glmm_psm, prob = c(0.025, 0.5, 0.975), pars = "beta", include = FALSE)
+print(glmm_psm, digits = 2)
+summary(glmm_psm, prob = c(0.025, 0.5, 0.975), pars = "beta", include = FALSE, digits = 2)
 
 # Calculate marginal log-likelihood, marginalizing over obs-level random errors
 # (to do this, specify new levels of ID)
