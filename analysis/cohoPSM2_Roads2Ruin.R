@@ -324,7 +324,7 @@ for(i in 1:length(stan_psm_cv_year_list))
     
     # Fit model
     cat("Working on model", i, "/", length(stan_psm_cv_year_list), 
-        "and hold-out year", j, "/", sort(unique(psm$year)), "(see Viewer for progress) \n\n")
+        "and hold-out year", j, "/", length(unique(psm$year)), "(see Viewer for progress) \n\n")
     fit <- stan(file = here("analysis","cohoPSM_SEM.stan"),
                 data = stan_dat_cv_year, 
                 init = lapply(1:3,function(i) stan_init_cv(stan_psm)),
@@ -448,7 +448,7 @@ for(i in 1:length(stan_psm_cv_site_list))
     
     # Fit model
     cat("Working on model", i, "/", length(stan_psm_cv_site_list), 
-        "and hold-out group", j, "/", sort(unique(site_group)), "(see Viewer for progress) \n\n")
+        "and hold-out group", j, "/", length(unique(site_group)), "(see Viewer for progress) \n\n")
     fit <- stan(file = here("analysis","cohoPSM_SEM.stan"),
                 data = stan_dat_cv_site, 
                 init = lapply(1:3,function(i) stan_init_cv(stan_psm)),
