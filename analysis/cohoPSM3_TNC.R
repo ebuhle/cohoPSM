@@ -1,10 +1,12 @@
 #+ setup_tnc
 ## @knitr setup_tnc
 if(.Platform$OS.type == "windows") options(device=windows)
+options(mc.cores = parallel::detectCores(logical = FALSE) - 1)
 library(rstan)
 library(loo)
 library(shinystan)
 library(rstanarm)
+library(brms)
 library(Hmisc)
 library(matrixStats)
 library(here)
@@ -45,7 +47,7 @@ glmm_psm <- stan_glmer(cbind(n_psm, n - n_psm) ~ (ppt_su + ppt_fa) * log_traffic
                        prior_intercept = normal(0,3),
                        prior = normal(0,3),
                        prior_covariance = decov(),
-                       chains = 3, cores = 3, iter = 2000, warmup = 1000,
+                       chains = 3, iter = 2000, warmup = 1000,
                        control = list(adapt_delta = 0.9))
 
 print(glmm_psm, digits = 2)
@@ -61,7 +63,7 @@ summary(glmm_psm, prob = c(0.025, 0.5, 0.975), pars = "beta", include = FALSE, d
 #+ posterior_linpred_reprex
 
 dat <- data.frame(group = gl(10, 5), y = rnorm(10)[rep(1:10, each = 5)] + rnorm(50))
-lmm <- stan_lmer(y ~ 1 + (1|group), data = dat, cores = 3, seed = 666)
+lmm <- stan_lmer(y ~ 1 + (1|group), data = dat, seed = 666)
 lp1 <- posterior_linpred(lmm, newdata = data.frame(group = 9:12), re.form = NA)
 head(lp1)
 lp2 <- posterior_linpred(lmm, newdata = data.frame(group = 9:12), re.form = ~ (1|group))
@@ -74,12 +76,18 @@ median(as.matrix(lmm, regex_pars = "Sigma"))
 #' the group-level effects are set to `0` and the prediction for all groups is the hyper-mean 
 #' (`(Intercept)`). It's not clear what `re.form = NULL` is doing. It's not using the hyper-mean,
 #' but the two new groups are identical. Maybe it's drawing a *single* new group-level 
-#' intercept at each posterior *sample*? But the SD of the residuals is smaller than the hyper-SD,
+#' intercept at each posterior *sample*? But the SD of the residuals differs from the hyper-SD,
 #' so...WTF? Looks like I'll have to put this one to the Stan forums.
 #' 
 #' In the meantime, it's actually not that difficult to construct the new observation-level 
 #' residuals by drawing from their hyperdistribution conditional on each sample of the hyper-mean
 #' and hyper-SD.
+
+#+ posterior_linpred_newgroups
+# Function to simulate from the posterior distribution of the linear predictor,
+# including group-varying intercepts for new groups not included in the fitted data
+## @knitr posterior_linpred_newgroups
+
 
 #+ glmm_psm_loglik
 # Calculate marginal log-likelihood, marginalizing over obs-level random errors
@@ -96,4 +104,15 @@ ll_glmm_psm <- t(posterior_linpred(glmm_psm, newdata = newdat, transform = TRUE)
 ll_glmm_psm <- apply(ll_glmm_psm, 1, function(p) dbinom(newdat$n_psm, newdat$n, p))
 ll_glmm_psm <- aggregate(ll_glmm_psm, by = list(idx = newdat$idx), mean)
 
+
+#' Let's take it from the top, this time using `brms` and `predict` instead of 
+#' `rstanarm` and `posterior_linpred`
+#+ brms_predict_reprex
+
+dat <- data.frame(group = gl(10, 5), y = rnorm(10)[rep(1:10, each = 5)] + rnorm(50))
+lmm <- stan_lmer(y ~ 1 + (1|group), data = dat, seed = 666)
+lp1 <- posterior_linpred(lmm, newdata = data.frame(group = 9:12), re.form = NA)
+head(lp1)
+lp2 <- posterior_linpred(lmm, newdata = data.frame(group = 9:12), re.form = ~ (1|group))
+head(lp2)
 
