@@ -51,22 +51,13 @@ glmm_psm <- stan_glmer(cbind(n_psm, n - n_psm) ~ (ppt_su + ppt_fa) * log_traffic
 print(glmm_psm, digits = 2)
 summary(glmm_psm, prob = c(0.025, 0.5, 0.975), pars = "beta", include = FALSE, digits = 2)
 
-
-## test whether posterior_linpred includes site-varying intercepts and slopes 
-newdat <- data.frame(ID = 147:150, site = unique(psm$site)[1:4], n = 0, n_psm = 0,
-                     log_traffic = 0, ppt_fa = 0, ppt_su = 0)
-
-lp <- posterior_linpred(glmm_psm, newdata = newdat, XZ = TRUE,
-                        re.form = ~ (ppt_su + ppt_fa || site) + (1|ID))
-head(lp)
-
 #' The following minimal example demonstrates how `posterior_linpred()`, and presumably
 #' `posterior_predict()`, handle *new levels* of grouping factors that define group-varying
 #' parameters. The documentation says that in this case the predictions "marginalize over the
 #' relevant variables", but it's not clear whether that means marginalizing over the 
-#' *hyperparameters* by drawing new (MV)N group-level parameters (as in `lme4::simulate` with 
-#' `re.form = NA`), or marginalizing over the *group-level effects* themselves. Unfortunately
-#' for me, it appears to be the latter. Let's have a look.
+#' *hyperparameters* by drawing new $\MVN group-level parameters (as in `lme4::simulate` with 
+#' `re.form = NA`), or marginalizing over the *group-level effects* themselves. Annoyingly
+#' for us, it appears to be the latter. Let's have a look.
 #+ posterior_linpred_reprex
 
 dat <- data.frame(group = gl(10, 5), y = rnorm(10)[rep(1:10, each = 5)] + rnorm(50))
@@ -85,9 +76,15 @@ median(as.matrix(lmm, regex_pars = "Sigma"))
 #' but the two new groups are identical. Maybe it's drawing a *single* new group-level 
 #' intercept at each posterior *sample*? But the SD of the residuals is smaller than the hyper-SD,
 #' so...WTF? Looks like I'll have to put this one to the Stan forums.
+#' 
+#' In the meantime, it's actually not that difficult to construct the new observation-level 
+#' residuals by drawing from their hyperdistribution conditional on each sample of the hyper-mean
+#' and hyper-SD.
 
+#+ glmm_psm_loglik
 # Calculate marginal log-likelihood, marginalizing over obs-level random errors
 # (to do this, specify new levels of ID)
+## @knitr glmm_psm_loglik
 newdat <- subset(psm_all_reg, data == "psm")
 newdat <- data.frame(idx = rep(1:nrow(newdat), each = 500), 
                      newdat[rep(1:nrow(newdat), each = 500),])
