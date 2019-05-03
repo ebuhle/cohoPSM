@@ -328,8 +328,8 @@ for(i in 1:length(stan_psm_cv_year_list))
     stan_dat_cv_year$I_lpd <- as.numeric(psm$year == j)  # hold-out data
     
     # Fit model
-    cat("Working on model", i, "/", length(stan_psm_cv_year_list), 
-        "and hold-out year", j, "/", length(unique(psm$year)), "(see Viewer for progress) \n\n")
+    cat("Working on model ", i, "/", length(stan_psm_cv_year_list), " and hold-out year ", 
+        j, "/", length(unique(psm$year)), " (see Viewer for progress) \n\n", sep = "")
     fit <- stan(file = here("analysis","cohoPSM_SEM.stan"),
                 data = stan_dat_cv_year, 
                 init = lapply(1:3,function(i) stan_init_cv(stan_psm)),
@@ -452,8 +452,8 @@ for(i in 1:length(stan_psm_cv_site_list))
     stan_dat_cv_site$I_lpd <- as.numeric(site_group == j)  # hold-out data
     
     # Fit model
-    cat("Working on model", i, "/", length(stan_psm_cv_site_list), 
-        "and hold-out group", j, "/", length(unique(site_group)), "(see Viewer for progress) \n\n")
+    cat("Working on model ", i, "/", length(stan_psm_cv_site_list), " and hold-out group ", 
+        j, "/", length(unique(site_group)), " (see Viewer for progress) \n\n", sep = "")
     fit <- stan(file = here("analysis","cohoPSM_SEM.stan"),
                 data = stan_dat_cv_site, 
                 init = lapply(1:3,function(i) stan_init_cv(stan_psm)),
