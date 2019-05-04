@@ -97,7 +97,6 @@ brms_fitted_newgroups <- function(object, newdata, re_formula = NULL)
   re <- ranef(object)
   # rows of newdata that have new levels of any grouping factors
   newgroups <- sapply(names(re), function(f) !(newdata[,f] %in% rownames(re[[f]])))
-  print(newgroups)
   if(!all(newgroups))
     lp[,!newgroups] <- fitted(object, newdata = newdata[!newgroups,,drop = FALSE], 
                               re_formula = re_formula)
@@ -138,6 +137,6 @@ head(lp1)
 lp2 <- fitted(lmm, newdata = data.frame(group = 9:12), re_formula = ~ (1|group), 
                allow_new_levels = TRUE, summary = FALSE)
 head(lp2)
-lp3 <- brms_fitted_newgroups(lmm, newdata = data.frame(group = 9:12), re_formula = ~ (1|group))
+lp3 <- brms_fitted_newgroups(lmm, newdata = data.frame(group = 9:20), re_formula = ~ (1|group))
 head(lp3)
 
