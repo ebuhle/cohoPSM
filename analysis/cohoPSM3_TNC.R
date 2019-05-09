@@ -2,6 +2,7 @@
 ## @knitr setup_tnc
 if(.Platform$OS.type == "windows") options(device=windows)
 options(mc.cores = parallel::detectCores(logical = FALSE) - 1)
+library(yarrr)
 library(rstan)
 library(loo)
 library(shinystan)
@@ -53,31 +54,69 @@ glmm_psm <- stan_glmer(cbind(n_psm, n - n_psm) ~ (ppt_su + ppt_fa) * log_traffic
 print(glmm_psm, digits = 2)
 summary(glmm_psm, prob = c(0.025, 0.5, 0.975), pars = "beta", include = FALSE, digits = 2)
 
-#' The following minimal example demonstrates how `posterior_linpred()`, and presumably
-#' `posterior_predict()`, handle *new levels* of grouping factors that define group-varying
+#' The following minimal example demonstrates how `rstanarm::posterior_linpred()`, and presumably
+#' `rstanarm::posterior_predict()`, handle *new levels* of grouping factors that define group-varying
 #' parameters. The documentation says that in this case the predictions "marginalize over the
 #' relevant variables", but it's not clear whether that means marginalizing over the 
 #' *hyperparameters* by drawing new $\MVN group-level parameters (as in `lme4::simulate` with 
 #' `re.form = NA`), or marginalizing over the *group-level effects* themselves. Annoyingly
 #' for us, it appears to be the latter. Let's have a look.
-#+ posterior_linpred_reprex
 
+#+ posterior_linpred_reprex
+set.seed(123)
 dat <- data.frame(group = gl(10, 5), y = rnorm(10)[rep(1:10, each = 5)] + rnorm(50))
-lmm <- stan_lmer(y ~ 1 + (1|group), data = dat, chains = 1, seed = 666)
-lp1 <- posterior_linpred(lmm, newdata = data.frame(group = 9:12), re.form = NA)
-head(lp1)
-lp2 <- posterior_linpred(lmm, newdata = data.frame(group = 9:12), re.form = ~ (1|group))
-head(lp2)
-colSds(lp2[,3:4] - lp1[,3:4])
-median(as.matrix(lmm, regex_pars = "Sigma"))
+lmm <- stan_lmer(y ~ 1 + (1|group), data = dat, chains = 1, seed = 456)
+lmm
+lp_fixef <- posterior_linpred(lmm, newdata = data.frame(group = 9:12), re.form = NA)
+head(lp_fixef)
+lp_ranef <- posterior_linpred(lmm, newdata = data.frame(group = 9:12), re.form = ~ (1|group))
+head(lp_ranef)
+lp_ranef <- posterior_linpred(lmm, newdata = data.frame(group = 9:12), re.form = ~ (1|group))
+head(lp_ranef)
 
 #' The first two columns in `newdata` correspond to groups present in the original sample,
-#' while the second two correspond to previously unobserved groups. With `re.form = NA`, 
+#' while the next two correspond to previously unobserved groups. With `re.form = NA`, 
 #' the group-level effects are set to `0` and the prediction for all groups is the hyper-mean 
-#' (`(Intercept)`). It's not clear what `re.form = NULL` is doing. It's not using the hyper-mean,
-#' but the two new groups are identical. Maybe it's drawing a *single* new group-level 
-#' intercept at each posterior *sample*? Looks like I'll have to put this one to the Stan forums.
+#' (`(Intercept)`). It's not clear what `re.form = ~ (1|group)` is doing. It's not using the hyper-mean,
+#' but the two new groups are identical, nor do repeated calls give different results. Maybe it's 
+#' drawing a *single* new group-level intercept at each posterior *sample*? Looks like I'll 
+#' have to put this one to the Stan forums.
 #' 
+#' Let's take it from the top, this time using `brms` and `predict()` instead of 
+#' `rstanarm` and `posterior_linpred()`
+
+#+ brms_predict_reprex1
+set.seed(123)
+dat <- data.frame(group = gl(10, 5), y = rnorm(10)[rep(1:10, each = 5)] + rnorm(50))
+lmm <- brm(y ~ 1 + (1|group), data = dat, chains = 1, seed = 456)
+lmm
+lp_fixef <- fitted(lmm, newdata = data.frame(group = 9:12), re_formula = NA, summary = FALSE)
+head(lp_fixef)
+lp_ranef <- fitted(lmm, newdata = data.frame(group = 9:12), re_formula = ~ (1|group), 
+                   allow_new_levels = TRUE, summary = FALSE)
+head(lp_ranef)
+lp_ranef <- fitted(lmm, newdata = data.frame(group = 9:12), re_formula = ~ (1|group), 
+                   allow_new_levels = TRUE, summary = FALSE)
+head(lp_ranef)
+
+#' OK, so apparently `predict()` is generating new groups' values from the hyperdistribution (good)
+#' but reusing the same values for every new group (bad). It does appear to be drawing new values
+#' each time it's called, though, which suggests we could hack it by calling it repeatedly over all 
+#' the new groups. Except...there's something fishy about that second call. The first new value is
+#' suspiciously similar to that of group 10 (column 2). Let's try a few more, focusing on just a
+#' single new group.
+
+#+ brms_predict_reprex2
+lp_ranef <- sapply(1:5, function(i) fitted(lmm, newdata = data.frame(group = 11), re_formula = ~ (1|group), 
+                                           allow_new_levels = TRUE, summary = FALSE))
+head(lp_ranef)
+
+#' What's going on here? Several of these values are almost identical. Am I seeing things? Nope,
+#' a pairs plot of these "randomly generated" values shows some distinctly nonrandom pattern:
+ 
+#+ brms_predict_reprex3, fig.width = 7, fig.height = 7, out.width = "60%"
+pairs(lp_ranef, col = transparent("darkblue", 0.7), labels = paste("call", 1:5))
+
 #' In the meantime, it's actually not that difficult to construct the new observation-level 
 #' residuals by drawing from their hyperdistribution conditional on each sample of the hyper-mean
 #' and hyper-SD. One approach would be to do this manually, adding the residuals
@@ -103,11 +142,9 @@ brms_fitted_newgroups <- function(object, newdata, re_formula = NULL)
   if(any(newgroups))
     for(i in which(newgroups))
       lp[,i] <- fitted(object, newdata = newdata[i,,drop = FALSE], 
-                             re_formula = re_formula, allow_new_levels = TRUE)
+                       re_formula = re_formula, allow_new_levels = TRUE)
   return(lp)
 }
-
-
 
 #+ glmm_psm_loglik
 # Calculate marginal log-likelihood, marginalizing over obs-level random errors
@@ -124,19 +161,4 @@ ll_glmm_psm <- t(posterior_linpred(glmm_psm, newdata = newdat, transform = TRUE)
 ll_glmm_psm <- apply(ll_glmm_psm, 1, function(p) dbinom(newdat$n_psm, newdat$n, p))
 ll_glmm_psm <- aggregate(ll_glmm_psm, by = list(idx = newdat$idx), mean)
 
-
-#' Let's take it from the top, this time using `brms` and `predict` instead of 
-#' `rstanarm` and `posterior_linpred`
-#+ brms_predict_reprex
-
-dat <- data.frame(group = gl(10, 5), y = rnorm(10)[rep(1:10, each = 5)] + rnorm(50))
-lmm <- brm(y ~ 1 + (1|group), data = dat, chains = 1)
-lmm
-lp1 <- fitted(lmm, newdata = data.frame(group = 9:12), re_formula = NA, summary = FALSE)
-head(lp1)
-lp2 <- fitted(lmm, newdata = data.frame(group = 9:12), re_formula = ~ (1|group), 
-               allow_new_levels = TRUE, summary = FALSE)
-head(lp2)
-lp3 <- brms_fitted_newgroups(lmm, newdata = data.frame(group = 9:20), re_formula = ~ (1|group))
-head(lp3)
 
