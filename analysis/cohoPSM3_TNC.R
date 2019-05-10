@@ -31,29 +31,6 @@ if(file.exists(here("analysis","results","glmm_psm.RData"))) {
 #' HIERARCHICAL REGRESSION MODELS FOR LANDSCAPE DATA AND PSM
 #'==================================================================
 
-#+ data_psm_glmm
-# Modify dataset
-# precip, traffic and log(traffic) centered and scaled to SD = 1
-## @knitr data_psm_glmm
-psm_all_reg <- transform(psm_all, ppt_su = scale(ppt_su), ppt_fa = scale(ppt_fa),
-                         traffic = scale(traffic), log_traffic = scale(log(pmax(traffic, 0.1))))
-
-#+ fit_psm_glmm, eval = eval_psm_glmm
-# Fit full model
-## @knitr fit_psm_glmm
-glmm_psm <- stan_glmer(cbind(n_psm, n - n_psm) ~ (ppt_su + ppt_fa) * log_traffic + 
-                         (ppt_su + ppt_fa || site) + (1 | ID),
-                       data = psm_all_reg, subset = data == "psm",
-                       family = binomial("logit"),
-                       prior_intercept = normal(0,3),
-                       prior = normal(0,3),
-                       prior_covariance = decov(),
-                       chains = 3, iter = 2000, warmup = 1000,
-                       control = list(adapt_delta = 0.9))
-
-print(glmm_psm, digits = 2)
-summary(glmm_psm, prob = c(0.025, 0.5, 0.975), pars = "beta", include = FALSE, digits = 2)
-
 #' The following minimal example demonstrates how `rstanarm::posterior_linpred()`, and presumably
 #' `rstanarm::posterior_predict()`, handle *new levels* of grouping factors that define group-varying
 #' parameters. The documentation says that in this case the predictions "marginalize over the
@@ -78,7 +55,7 @@ head(lp_ranef)
 #' while the next two correspond to previously unobserved groups. With `re.form = NA`, 
 #' the group-level effects are set to `0` and the prediction for all groups is the hyper-mean 
 #' (`(Intercept)`). It's not clear what `re.form = ~ (1|group)` is doing. It's not using the hyper-mean,
-#' but the two new groups are identical, nor do repeated calls give different results. Maybe it's 
+#' but the two new groups are identical, and repeated calls give the same result. Maybe it's 
 #' drawing a *single* new group-level intercept at each posterior *sample*? Looks like I'll 
 #' have to put this one to the Stan forums.
 #' 
@@ -100,8 +77,8 @@ lp_ranef <- fitted(lmm, newdata = data.frame(group = 9:12), re_formula = ~ (1|gr
 head(lp_ranef)
 
 #' OK, so apparently `predict()` is generating new groups' values from the hyperdistribution (good)
-#' but reusing the same values for every new group (bad). It does appear to be drawing new values
-#' each time it's called, though, which suggests we could hack it by calling it repeatedly over all 
+#' but reusing the same values for every new group (bad). However, it does appear to draw new values
+#' each time it's called, which suggests we could hack it by calling it repeatedly over all 
 #' the new groups. Except...there's something fishy about that second call. The first new value is
 #' suspiciously similar to that of group 10 (column 2). Let's try a few more, focusing on just a
 #' single new group.
@@ -111,40 +88,65 @@ lp_ranef <- sapply(1:5, function(i) fitted(lmm, newdata = data.frame(group = 11)
                                            allow_new_levels = TRUE, summary = FALSE))
 head(lp_ranef)
 
-#' What's going on here? Several of these values are almost identical. Am I seeing things? Nope,
+#' What's going on here? Several of these values are almost identical to each other and/or to
+#' values returned above for previously observed groups. Am I seeing things? Nope,
 #' a pairs plot of these "randomly generated" values shows some distinctly nonrandom pattern:
  
 #+ brms_predict_reprex3, fig.width = 7, fig.height = 7, out.width = "60%"
 pairs(lp_ranef, col = transparent("darkblue", 0.7), labels = paste("call", 1:5))
 
-#' In the meantime, it's actually not that difficult to construct the new observation-level 
-#' residuals by drawing from their hyperdistribution conditional on each sample of the hyper-mean
-#' and hyper-SD. One approach would be to do this manually, adding the residuals
-#' to the output of `posterior_linpred()` called with `re.form` leaving out the
-#' observation-level term(s) in question. But that would entail figuring out the internal `lme4`
-#' `Z`-matrix plumbing. A less efficient but much simpler brute-force approach is to just call
-#' `posterior_predict()` repeatedly, once for each row in `newdata` with an unobserved group
-#' (since a different draw from the hyperdistribution is returned each time).
+#' Unless and until this is resolved, it looks like we're stuck with generating the linear predictor
+#' for new observation-level random effects by brute force. We can do this in `rstanarm` by adding 
+#' residuals drawn from the hyperdistribution to the output of `posterior_linpred()` called with a 
+#' `re.form` that leaves out the observation-level term(s) in question. This kludgy solution is limited
+#' to the case of random effects on the intercept (vs. the slopes).
 
-#+ brms_fitted_newgroups
+#+ posterior_linpred_newgroups
 # Function to simulate from the posterior distribution of the linear predictor,
 # including group-varying intercepts for new groups not included in the fitted data
-## @knitr brms_fitted_newgroups
-brms_fitted_newgroups <- function(object, newdata, re_formula = NULL) 
+## @knitr posterior_linpred_newgroups
+posterior_linpred_newgroups <- function(object, newdata, re.form = NULL) 
 {
   lp <- matrix(NA, nrow(as.matrix(object)), nrow(newdata))
   re <- ranef(object)
   # rows of newdata that have new levels of any grouping factors
-  newgroups <- sapply(names(re), function(f) !(newdata[,f] %in% rownames(re[[f]])))
+  newgroups <- sapply(names(re), function(f) {
+    ng <- !(newdata[,f] %in% rownames(re[[f]]))
+    if(any(newgroups) & any(colnames(re[[f]]) != "(Intercept)"))
+      stop("New groups allowed only allowed for term (Intercept)") else return(ng)
+    })
   if(!all(newgroups))
-    lp[,!newgroups] <- fitted(object, newdata = newdata[!newgroups,,drop = FALSE], 
-                              re_formula = re_formula)
+    lp[,!newgroups] <- posterior_linpred(object, newdata = newdata[!newgroups,,drop = FALSE], 
+                              re.form = re.form)
   if(any(newgroups))
     for(i in which(newgroups))
       lp[,i] <- fitted(object, newdata = newdata[i,,drop = FALSE], 
-                       re_formula = re_formula, allow_new_levels = TRUE)
+                       re_form = re.form)
   return(lp)
 }
+
+#+ data_psm_glmm
+# Modify dataset
+# precip, traffic and log(traffic) centered and scaled to SD = 1
+## @knitr data_psm_glmm
+psm_all_reg <- transform(psm_all, ppt_su = scale(ppt_su), ppt_fa = scale(ppt_fa),
+                         traffic = scale(traffic), log_traffic = scale(log(pmax(traffic, 0.1))))
+
+#+ fit_psm_glmm, eval = eval_psm_glmm
+# Fit full model
+## @knitr fit_psm_glmm
+glmm_psm <- stan_glmer(cbind(n_psm, n - n_psm) ~ (ppt_su + ppt_fa) * log_traffic + 
+                         (ppt_su + ppt_fa || site) + (1 | ID),
+                       data = psm_all_reg, subset = data == "psm",
+                       family = binomial("logit"),
+                       prior_intercept = normal(0,3),
+                       prior = normal(0,3),
+                       prior_covariance = decov(),
+                       chains = 3, iter = 2000, warmup = 1000,
+                       control = list(adapt_delta = 0.9))
+
+print(glmm_psm, digits = 2)
+summary(glmm_psm, prob = c(0.025, 0.5, 0.975), pars = "beta", include = FALSE, digits = 2)
 
 #+ glmm_psm_loglik
 # Calculate marginal log-likelihood, marginalizing over obs-level random errors
