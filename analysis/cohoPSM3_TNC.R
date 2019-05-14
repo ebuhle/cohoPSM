@@ -135,9 +135,9 @@ posterior_linpred_newgroups <- function(object, newdata)
 #' The following function calculates the marginal log-likelihood of observed PSM frequencies
 #' from a fitted `stanreg` object by Monte Carlo integration over the observation-level residuals.
 
-#+ LL_glmm_psm
-## @knitr LL_glmm_psm
-LL_glmm_psm <- function(object, data = NULL, N_MC = 1000)
+#+ get_LL_glmm_psm
+## @knitr get_LL_glmm_psm
+get_LL_glmm_psm <- function(object, data = NULL, N_MC = 1000)
 {
   if(is.null(data)) data <- object$data
   # random effects-only formula
@@ -150,7 +150,7 @@ LL_glmm_psm <- function(object, data = NULL, N_MC = 1000)
   # generate new obs-level residuals, calculate log of marginal likelihood
   sigma_psm <- as.matrix(object, regex_pars= "Sigma\\[ID")
   LL <- sapply(1:nrow(data), function(i) {
-    resid_psm_mc <- rnorm(nrow(sigma_psm)*N_MC, 0, sigma_psm)
+    resid_psm_mc <- matrix(rnorm(nrow(sigma_psm)*N_MC, 0, sigma_psm), nrow(sigma_psm), N_MC)
     p_psm_mc <- plogis(lp[,i] + resid_psm_mc)
     LL_psm_mc <- dbinom(data$n_psm[i], data$n[i], p_psm_mc, log = TRUE)
     return(matrixStats::rowLogSumExps(LL_psm_mc) - log(N_MC))
@@ -188,7 +188,9 @@ summary(glmm_psm, prob = c(0.025, 0.5, 0.975), pars = "beta", include = FALSE, d
 ## @knitr ignore
 
 #' Calculate the marginal log-likelihood of the observed PSM frequencies under the GLMM.
-#+ calcLL_glmm_psm
+#+ calc_LL_glmm_psm
+## @knitr calc_LL_glmm_psm
+LL_glmm_psm <- get_LL_glmm_psm(glmm_psm, data = psm_all_reg[psm_all_reg$data=="psm",])
 
 
 
