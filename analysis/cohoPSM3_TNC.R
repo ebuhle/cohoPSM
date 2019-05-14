@@ -105,36 +105,74 @@ pairs(lp_ranef, col = transparent("darkblue", 0.7), labels = paste("call", 1:5))
 # Function to simulate from the posterior distribution of the linear predictor,
 # including group-varying intercepts for new groups not included in the fitted data
 ## @knitr posterior_linpred_newgroups
-posterior_linpred_newgroups <- function(object, newdata, re.form = NULL) 
+posterior_linpred_newgroups <- function(object, newdata) 
 {
   lp <- matrix(NA, nrow(as.matrix(object)), nrow(newdata))
   re <- ranef(object)
+  re_form <- lme4::findbars(formula(object))  # all random effect terms
   # rows of newdata that have new levels of any grouping factors
   newgroups <- sapply(names(re), function(f) {
     ng <- !(newdata[,f] %in% rownames(re[[f]]))
-    if(any(newgroups) & any(colnames(re[[f]]) != "(Intercept)"))
-      stop("New groups allowed only allowed for term (Intercept)") else return(ng)
+    if(any(ng) & any(colnames(re[[f]]) != "(Intercept)"))
+      stop("New groups allowed only allowed for term (Intercept)") else {
+        ## won't work with sapply ## re_form <- re_form - formula(paste0("~ (1|", f, ")"))
+        return(ng)
+      }
     })
   if(!all(newgroups))
-    lp[,!newgroups] <- posterior_linpred(object, newdata = newdata[!newgroups,,drop = FALSE], 
-                              re.form = re.form)
-  if(any(newgroups))
-    for(i in which(newgroups))
-      lp[,i] <- fitted(object, newdata = newdata[i,,drop = FALSE], 
-                       re_form = re.form)
+    lp[,!newgroups] <- posterior_linpred(object, newdata = newdata[!newgroups,,drop = FALSE])
+  if(any(newgroups)) {
+    lp[,newgroups] <- posterior_linpred(object, newdata = newdata[i,,drop = FALSE], 
+                                        re.form = re_form)
+    ## ...and then somehow add random effects generated from the hyperdistributions corresponding
+    ## to the discarded group-level intercepts???
+  }
   return(lp)
 }
 
-#+ data_psm_glmm
-# Modify dataset
-# precip, traffic and log(traffic) centered and scaled to SD = 1
-## @knitr data_psm_glmm
+#' Arrgh, this is too convoluted for what is still a hacky and inflexible solution. 
+#' Might as well just tailor it specifically for the PSM GLMM case.
+#' The following function calculates the marginal log-likelihood of observed PSM frequencies
+#' from a fitted `stanreg` object by Monte Carlo integration over the observation-level residuals.
+
+#+ LL_glmm_psm
+## @knitr LL_glmm_psm
+LL_glmm_psm <- function(object, data = NULL, N_MC = 1000)
+{
+  if(is.null(data)) data <- object$data
+  # random effects-only formula
+  re_formula <- reformulate(sapply(lme4::findbars(formula(object)),
+                                   function(f) paste("(", deparse(f), ")")))
+  # drop obs-level random effect (assumes re_formula contains other random terms)
+  re_formula <- update(re_formula, ~ . - (1|ID))
+  # posterior draws of linear predictor without obs-level random effect
+  lp <- posterior_linpred(object, newdata = data, re.form = re_formula)
+  # generate new obs-level residuals, calculate log of marginal likelihood
+  sigma_psm <- as.matrix(object, regex_pars= "Sigma\\[ID")
+  LL <- sapply(1:nrow(data), function(i) {
+    resid_psm_mc <- rnorm(nrow(sigma_psm)*N_MC, 0, sigma_psm)
+    p_psm_mc <- plogis(lp[,i] + resid_psm_mc)
+    LL_psm_mc <- dbinom(data$n_psm[i], data$n[i], p_psm_mc, log = TRUE)
+    return(matrixStats::rowLogSumExps(LL_psm_mc) - log(N_MC))
+  })
+}
+## @knitr ignore
+
+#' Modify the PSM dataset to make it suitable for regression modeling.
+#' precip, traffic and log(traffic) centered and scaled to SD = 1 
+#+ data_glmm_psm
+## @knitr data_glmm_psm
 psm_all_reg <- transform(psm_all, ppt_su = scale(ppt_su), ppt_fa = scale(ppt_fa),
                          traffic = scale(traffic), log_traffic = scale(log(pmax(traffic, 0.1))))
+## @knitr ignore
 
-#+ fit_psm_glmm, eval = eval_psm_glmm
-# Fit full model
-## @knitr fit_psm_glmm
+#' Fit the "full" GLMM with summer and fall precip and log(traffic) as predictors.
+#' This model has the same structure as the "GLMM-like" submodel of the SEM, but 
+#' replaces the latent urbanization factor(s) with a single indicator variable, `traffic`.
+#' (The log transformation is used to emulate the log link function used for `traffic` and
+#' other gamma-distributed landscape variables in the "factor-analytic" submodel of the SEM.) 
+#+ fit_glmm_psm, eval = eval_glmm_psm
+## @knitr fit_glmm_psm
 glmm_psm <- stan_glmer(cbind(n_psm, n - n_psm) ~ (ppt_su + ppt_fa) * log_traffic + 
                          (ppt_su + ppt_fa || site) + (1 | ID),
                        data = psm_all_reg, subset = data == "psm",
@@ -147,20 +185,13 @@ glmm_psm <- stan_glmer(cbind(n_psm, n - n_psm) ~ (ppt_su + ppt_fa) * log_traffic
 
 print(glmm_psm, digits = 2)
 summary(glmm_psm, prob = c(0.025, 0.5, 0.975), pars = "beta", include = FALSE, digits = 2)
+## @knitr ignore
 
-#+ glmm_psm_loglik
-# Calculate marginal log-likelihood, marginalizing over obs-level random errors
-# (to do this, specify new levels of ID)
-## @knitr glmm_psm_loglik
-newdat <- subset(psm_all_reg, data == "psm")
-newdat <- data.frame(idx = rep(1:nrow(newdat), each = 500), 
-                     newdat[rep(1:nrow(newdat), each = 500),])
-newdat$ID <- max(newdat$ID) + 1:nrow(newdat) # unobserved ID levels
-### WTF? posterior_linpred() ignores ID-level intercept (but works with toy example)
-lp <- posterior_linpred(glmm_psm, newdata = newdat)
+#' Calculate the marginal log-likelihood of the observed PSM frequencies under the GLMM.
+#+ calcLL_glmm_psm
 
-ll_glmm_psm <- t(posterior_linpred(glmm_psm, newdata = newdat, transform = TRUE))
-ll_glmm_psm <- apply(ll_glmm_psm, 1, function(p) dbinom(newdat$n_psm, newdat$n, p))
-ll_glmm_psm <- aggregate(ll_glmm_psm, by = list(idx = newdat$idx), mean)
+
+
+
 
 
