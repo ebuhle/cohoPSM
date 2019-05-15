@@ -20,28 +20,10 @@ library(dplyr)
 ## Set working directory. Add in your own path in an if statement for your file structure
 if(length(grep("ailene", getwd())>0)) { setwd("~/Documents/GitHub/cohoPSM")}
 
-## Step 1: Read in the data and model estimates
+## Step 1:  Read in the data/model estimates
 psm_pre<-read.table("analysis/results/PSM_predictions.txt",header=TRUE)
-head(psm_pre)
-
-plot(psm_pre$Z.mean,psm_pre$p.psm.mean,)
-#A cheap way to get Zcrit associated with threshold PSM. 
-#Need to make this more robust, use model/include full posterior distribution to get error, etc
-psm_thresh<-0.25
-
-Zcrit<-mean(psm_pre$Z.mean[round(psm_pre$p.psm.mean,digits=2)==psm_thresh])
-
-#try using a lower Zcrit- the lower Z value associated with a psm above the threshold
-#Zcrit<-min(psm_pre$Z.mean[psm_pre$p.psm.mean>psm_thresh])
-
-## Step 2. Calculate difference between Z_mean and Zcrit (=deltaZ, or the change in Z required to get PSM to 40%)
-## for all sites and select out just the bad sites
-psm_pre$Zcrit<-Zcrit
-psm_pre$deltaZ<-psm_pre$Zcrit-psm_pre$Z.mean
-
-## Step 3. Plot Change in Z on x-axis and benefits of interest on the y axis
-## as a mock up of what we may want to do, use mean abundance of spawning salmon as the measure of abundance.
 spawn<-read.csv("data/spawner_data.csv", header=TRUE)
+spatial<-read.csv("data/spatial_data.csv", header=TRUE)
 
 ## calculate mean spawner abundance by site, across years
 spawnmn<-aggregate(spawn$n,list(spawn$site),mean)
@@ -50,7 +32,28 @@ colnames(spawnmn)<-c("site", "spawn.n")
 #used pared down psm_pre file, with just named sites (what are numbered sites anyway?)
 psm_pre2<-psm_pre[1:51,]
 psm_pre3<-full_join(psm_pre2,spawnmn)
-#create a variable of 0/1 for if PSM is less than 0.4
+
+## Step 2:Select the threshold psm you want to use
+psm_thresh<-0.25
+#plot(psm_pre$Z.mean,psm_pre$p.psm.mean,)
+#A cheap way to get Zcrit associated with threshold PSM. 
+#Need to make this more robust, use model/include full posterior distribution to get error, etc
+
+Zcrit<-mean(psm_pre$Z.mean[round(psm_pre$p.psm.mean,digits=2)==psm_thresh])
+
+#try using a lower Zcrit- the lower Z value associated with a psm above the threshold
+Zcrit<-min(psm_pre$Z.mean[psm_pre$p.psm.mean>psm_thresh])
+
+## Step 2. Calculate difference between Z_mean and Zcrit (=deltaZ, or the change in Z required to get PSM to 40%)
+## for all sites and select out just the bad sites
+psm_pre$Zcrit<-Zcrit
+psm_pre$deltaZ<-psm_pre$Zcrit-psm_pre$Z.mean
+
+## Step 3. Plot Change in Z on x-axis and benefits of interest on the y axis
+## as a mock up of what we may want to do, use mean abundance of spawning salmon as the measure of abundance.
+
+
+#create a variable of 0/1 for if PSM is less than threshold
 psm_pre3$psmcol<-"darkred" 
 psm_pre3$psmcol[psm_pre3$p.psm.mean<psm_thresh]<-"lightgreen"
 
@@ -60,15 +63,15 @@ pdf("analysis/results/testdeltaZvsbenefitsfig.pdf", width = 16, height = 8)
 par(mfrow=c(1,3))
 #plot relationship of PSM and Z
 
-plot(psm_pre3$Z.mean, psm_pre3$p.psm.mean, pch=19,col=psm_pre3$psmcol, cex.lab=1.2,cex.axis=1.2,cex=2, xlab="Urbanization score (Z)", ylab= "Mean Pred.PSM")
-abline(h=psm_thresh, lty=2, lwd=2)
-text(min(psm_pre3$Z.mean)+.5,psm_thresh+.02,label="PSM threshold", cex=1.2)
-abline(v=Zcrit, lty=2, lwd=2, col="blue")
-text(Zcrit,.02,label="Zcrit", col="blue",cex=1.2)
-text(psm_pre3$Z.mean, psm_pre3$p.psm.mean, labels=as.numeric(as.factor(psm_pre3$site)),cex=0.8, font=2)
-polygon(c(Zcrit,Zcrit,max(psm_pre3$Z.mean),max(psm_pre3$Z.mean)),
-        c(0,1,1,0),col=adjustcolor("salmon",alpha.f=0.5),
+plot(psm_pre3$p.psm.mean, psm_pre3$Z.mean, pch=19,col=psm_pre3$psmcol, cex.lab=1.2,cex.axis=1.2,cex=2, ylab="Urbanization score (Z)", xlab= "Mean Pred.PSM")
+abline(v=psm_thresh, lty=2, lwd=2)
+text(psm_thresh+.02,min(psm_pre3$Z.mean),label="PSM threshold", cex=1.2)
+abline(h=Zcrit, lty=2, lwd=2, col="blue")
+#text(psm_pre3$p.psm.mean, psm_pre3$Z.mean, labels=as.numeric(as.factor(psm_pre3$site)),cex=0.8, font=2)
+polygon(c(psm_thresh,1,1,psm_thresh),c(Zcrit,Zcrit,max(psm_pre3$Z.mean)+.5,max(psm_pre3$Z.mean)+.5),
+        col=adjustcolor("salmon",alpha.f=0.5),
         border=NA)
+text(.02,Zcrit+.04,label="Zcrit", col="blue",cex=1.2)
 
 #plot change in Z vs benefit (first  benefit=spawner abundance)
 plot(psm_pre3$deltaZ, psm_pre3$spawn.n, cex=2,cex.lab=1.2,cex.axis=1.2,xlab=expression(paste("Change in urbanization required (",Delta,"Z)", sep="")), ylab= "Benefit = spawner abundance", type="p", pch=19, col=psm_pre3$psmcol)
