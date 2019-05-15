@@ -1,3 +1,10 @@
+#' ---
+#' title: "Untitled"
+#' author: "Eric Buhle"
+#' date: "5/14/2019"
+#' output: github_document
+#' ---
+  
 #+ setup_tnc
 ## @knitr setup_tnc
 if(.Platform$OS.type == "windows") options(device=windows)
@@ -101,10 +108,9 @@ pairs(lp_ranef, col = transparent("darkblue", 0.7), labels = paste("call", 1:5))
 #' `re.form` that leaves out the observation-level term(s) in question. This kludgy solution is limited
 #' to the case of random effects on the intercept (vs. the slopes).
 
-#+ posterior_linpred_newgroups
+#+ posterior_linpred_newgroups, eval = FALSE
 # Function to simulate from the posterior distribution of the linear predictor,
 # including group-varying intercepts for new groups not included in the fitted data
-## @knitr posterior_linpred_newgroups
 posterior_linpred_newgroups <- function(object, newdata) 
 {
   lp <- matrix(NA, nrow(as.matrix(object)), nrow(newdata))
@@ -171,7 +177,7 @@ psm_all_reg <- transform(psm_all, ppt_su = scale(ppt_su), ppt_fa = scale(ppt_fa)
 #' replaces the latent urbanization factor(s) with a single indicator variable, `traffic`.
 #' (The log transformation is used to emulate the log link function used for `traffic` and
 #' other gamma-distributed landscape variables in the "factor-analytic" submodel of the SEM.) 
-#+ fit_glmm_psm, eval = eval_glmm_psm
+#+ fit_glmm_psm
 ## @knitr fit_glmm_psm
 glmm_psm <- stan_glmer(cbind(n_psm, n - n_psm) ~ (ppt_su + ppt_fa) * log_traffic + 
                          (ppt_su + ppt_fa || site) + (1 | ID),
@@ -191,9 +197,6 @@ summary(glmm_psm, prob = c(0.025, 0.5, 0.975), pars = "beta", include = FALSE, d
 #+ calc_LL_glmm_psm
 ## @knitr calc_LL_glmm_psm
 LL_glmm_psm <- get_LL_glmm_psm(glmm_psm, data = psm_all_reg[psm_all_reg$data=="psm",])
-
-
-
 
 
 
