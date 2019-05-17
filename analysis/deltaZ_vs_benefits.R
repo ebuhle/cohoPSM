@@ -61,7 +61,22 @@ text(d$deltaZ, d$spawn.n, labels=as.numeric(as.factor(d$site)),cex=0.8, font=2)
 polygon(c(0,0,min(d$deltaZ),min(d$deltaZ)),
         c(0,max(d$spawn.n),max(d$spawn.n),0),col=adjustcolor("salmon",alpha.f=0.5),
         border=NA)
+## Step 4. Compare to other benefits of interest- abundance or presence of other salmon species for all sites, human pops, stream biodiversity. Can blake get these?
+text(d$deltaZ, d$spawn.n, labels=as.numeric(as.factor(d$site)),cex=0.8, font=2)
+polygon(c(0,0,min(d$deltaZ),min(d$deltaZ)),
+        c(0,max(d$spawn.n),max(d$spawn.n),0),col=adjustcolor("salmon",alpha.f=0.5),
+        border=NA)
 
+
+#plot change in Z vs benefit of number of people living nearby (don't have this data right now, so making it up as a function of Z with some noist)
+#plot(psm_pre3$Z.mean,pop.pred)#check
+plot(d$deltaZ,d$pop_census, cex=2,cex.lab=1.2,cex.axis=1.2,xlab=expression(paste("Change in urbanization required (",Delta,"Z)", sep="")), ylab= "Benefit = number of people nearby", type="p", pch=19, col=d$psmcol)
+text(d$deltaZ, d$pop_census, labels=as.numeric(as.factor(d$site)),cex=0.8, font=2)
+polygon(c(0,0,min(d$deltaZ),min(d$deltaZ)),
+        c(0,max(d$pop_census),max(d$pop_census),0),col=adjustcolor("salmon",alpha.f=0.5),
+        border=NA)
+
+dev.off()
 
   #plot change in Z vs benefit (first  benefit=spawner abundance)
 quartz()
@@ -78,10 +93,11 @@ myPalette <- colorRampPalette(brewer.pal(9, "RdYlGn")) #### Gives us a heat map 
 cols = myPalette(length(rest.score))
 rxy<- data.frame(cbind(rxy,cols))
 
-plot(rxy$deltaZ, rxy$spawn.n, cex=2,cex.lab=1.2,cex.axis=1.2,xlab="Effort", ylab= "Benefit = spawner abundance", type="p", pch=19, 
-     xlim=c(-2,0),col=rxy$cols)
+plot(rxy$newdeltaZ, rxy$spawn.n, cex=2,cex.lab=1.2,cex.axis=1.2,xlab="Effort", ylab= "Benefit = spawner abundance", type="p", pch=19, col=rxy$cols)
 mtext(side=1,expression(paste("Change in urbanization required (",Delta,"Z)", sep="")),line=4)
 mtext(side=3,"Goal=Restoration",line=0)
+
+
 #conservatopn sites= those with below threshold psm
 c<-d[d$p.psm.mean<input$psm_thresh,]
 cxy<-subset(c,select=c(newdeltaZ,spawn.n))
@@ -95,25 +111,7 @@ rxy<- data.frame(cbind(rxy,cols))
 
 
 
-## Step 4. Compare to other benefits of interest- abundance or presence of other salmon species for all sites, human pops, stream biodiversity. Can blake get these?
-text(d$deltaZ, d$spawn.n, labels=as.numeric(as.factor(d$site)),cex=0.8, font=2)
-polygon(c(0,0,min(d$deltaZ),min(d$deltaZ)),
-        c(0,max(d$spawn.n),max(d$spawn.n),0),col=adjustcolor("salmon",alpha.f=0.5),
-        border=NA)
 
-
-## Step 4. Compare to other benefits of interest- abundance or presence of other salmon species for all sites, human pops, stream biodiversity. Can blake get these?
-
-#plot change in Z vs benefit of number of people living nearby (don't have this data right now, so making it up as a function of Z with some noist)
-pop.pred<-as.integer(3000+psm_pre3$Z.mean*1000) + as.integer(rnorm(length(psm_pre3$Z.mean),0,500))
-#plot(psm_pre3$Z.mean,pop.pred)#check
-plot(psm_pre3$deltaZ,pop.pred, cex=2,cex.lab=1.2,cex.axis=1.2,xlab=expression(paste("Change in urbanization required (",Delta,"Z)", sep="")), ylab= "Benefit = number of people nearby", type="p", pch=19, col=psm_pre3$psmcol)
-text(psm_pre3$deltaZ, pop.pred, labels=as.numeric(as.factor(psm_pre3$site)),cex=0.8, font=2)
-polygon(c(0,0,min(psm_pre3$deltaZ),min(psm_pre3$deltaZ)),
-        c(0,max(pop.pred),max(pop.pred),0),col=adjustcolor("salmon",alpha.f=0.5),
-        border=NA)
-
-dev.off()
 ## I looked into salmon abunndance data from DWF stock inventory pops- no "bad sites" included. some good sites included...look into this more
 badsites<-psm_pre[psm_pre$Z_mean>psm_thresh,]
 sitenames<-unique(psm_pre$site)[1:51]
