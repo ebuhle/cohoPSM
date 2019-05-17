@@ -26,7 +26,6 @@ ui <- fluidPage(
                   min = 0,
                   max = 1.0,
                   value = 0.25)
-      selectInput('benefit', 'Benefit', names(iris)),
       
     ),
     
@@ -60,7 +59,7 @@ server <- function(input, output) {
     psm_pre3$Zcrit<-Zcrit
     psm_pre3$deltaZ<-psm_pre3$Zcrit-psm_pre3$Z.mean
     
-    plot(psm_pre3$p.psm.mean, psm_pre3$Z.mean, pch=19,col=psm_pre3$psmcol, cex.lab=1.2,cex.axis=1.2,cex=2, ylab="Urbanization effections (Z)", xlab= "Mean Pre-Spawn Mortality")
+    plot(psm_pre3$p.psm.mean, psm_pre3$Z.mean, pch=19,col=psm_pre3$psmcol, cex.lab=1.2,cex.axis=1.2,cex=2, ylab="Urbanization effects (Z)", xlab= "Mean Pre-Spawn Mortality")
     
     abline(v=input$psm_thresh, lty=2, lwd=2)
     
