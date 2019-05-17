@@ -4,8 +4,9 @@ library(shiny)
 
 ## Read in the data/model estimates and join
 psm_pre<-read.table("../analysis/results/PSM_predictions.txt",header=TRUE)
-spawn<-read.csv("data/spawner_data.csv", header=TRUE)
-spatial<-read.csv("data/spatial_data.csv", header=TRUE)
+spawn<-read.csv("../data/spawner_data.csv", header=TRUE)
+spatial<-read.csv("../data/spatial_data.csv", header=TRUE)
+source ("../analysis/source/prepforplots.R")
 
 #choose what data you want to include
 allsites=FALSE #if false, selects out only sites with PSM calculated from field data, rather than sites with predicted PSM too
