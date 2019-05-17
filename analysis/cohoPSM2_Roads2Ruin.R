@@ -118,7 +118,7 @@ stan_init <- function(stan_dat)
     # X <- t(X)
     D <- D_normal + D_gamma
     
-    list(a0 = rnorm(D, c(colMeans(X[,1:D_normal]), colMeans(log(X[,-(1:D_normal)]))), 1),
+    list(a0 = rnorm(D, c(colMeans(X[,0:D_normal]), colMeans(log(X[,(D_normal+1):D]))), 1),
          A_nid_vec = array(rnorm(D*L - L*(L-1)/2, 0, 1), dim = D*L - L*(L-1)/2),
          Z_nid = matrix(rnorm(S*L, 0, 1), nrow = S, ncol = L),
          phi = runif(D, 0.5, 1),
