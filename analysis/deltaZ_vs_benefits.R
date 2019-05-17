@@ -17,6 +17,7 @@ options(stringsAsFactors = FALSE)
 
 ## libraries
 library(dplyr)
+library(RColorBrewer)
 ## Set working directory. Add in your own path in an if statement for your file structure
 if(length(grep("ailene", getwd())>0)) { setwd("~/Documents/GitHub/cohoPSM")}
 
@@ -25,37 +26,16 @@ psm_pre<-read.table("analysis/results/PSM_predictions.txt",header=TRUE)
 spawn<-read.csv("data/spawner_data.csv", header=TRUE)
 spatial<-read.csv("data/spatial_data.csv", header=TRUE)
 
-## calculate mean spawner abundance by site, across years
-spawnmn<-aggregate(spawn$n,list(spawn$site),mean)
-colnames(spawnmn)<-c("site", "spawn.n")
+## Step 2: Choices: select the threshold psm and you want to use, and select all sites or only sites for which we have PSM data (rather than predicted PSM)
+input<-as.data.frame(NA)
+input$psm_thresh<-0.25
+allsites=FALSE #if false, selects out only sites with PSM calculated from field data, rather than sites with predicted PSM too
 
-#used pared down psm_pre file, with just named sites (what are numbered sites anyway?)
-psm_pre2<-psm_pre[1:51,]
-psm_pre3<-full_join(psm_pre2,spawnmn)
-
-## Step 2:Select the threshold psm you want to use
-psm_thresh<-0.25
-#plot(psm_pre$Z.mean,psm_pre$p.psm.mean,)
-#A cheap way to get Zcrit associated with threshold PSM. 
-#Need to make this more robust, use model/include full posterior distribution to get error, etc
-
-Zcrit<-mean(psm_pre$Z.mean[round(psm_pre$p.psm.mean,digits=2)==psm_thresh])
-
-#try using a lower Zcrit- the lower Z value associated with a psm above the threshold
-Zcrit<-min(psm_pre$Z.mean[psm_pre$p.psm.mean>psm_thresh])
-
-## Step 2. Calculate difference between Z_mean and Zcrit (=deltaZ, or the change in Z required to get PSM to 40%)
-## for all sites and select out just the bad sites
-psm_pre$Zcrit<-Zcrit
-psm_pre$deltaZ<-psm_pre$Zcrit-psm_pre$Z.mean
-
-## Step 3. Plot Change in Z on x-axis and benefits of interest on the y axis
-## as a mock up of what we may want to do, use mean abundance of spawning salmon as the measure of abundance.
-
-
-#create a variable of 0/1 for if PSM is less than threshold
-psm_pre3$psmcol<-"darkred" 
-psm_pre3$psmcol[psm_pre3$p.psm.mean<psm_thresh]<-"lightgreen"
+## Step 3: combine all the data and prep for plotting calculate mean spawner abundance by site, across years
+## combined data file with things we want to plot is called "d"
+source ("analysis/source/prepforplots.R")
+dim(d)
+## Step 4. Plot Change in Z on x-axis and benefits of interest on the y axis
 
 #quartz(height=8,width=16)
 pdf("analysis/results/testdeltaZvsbenefitsfig.pdf", width = 16, height = 8)
@@ -63,23 +43,65 @@ pdf("analysis/results/testdeltaZvsbenefitsfig.pdf", width = 16, height = 8)
 par(mfrow=c(1,3))
 #plot relationship of PSM and Z
 
-plot(psm_pre3$p.psm.mean, psm_pre3$Z.mean, pch=19,col=psm_pre3$psmcol, cex.lab=1.2,cex.axis=1.2,cex=2, ylab="Urbanization score (Z)", xlab= "Mean Pred.PSM")
-abline(v=psm_thresh, lty=2, lwd=2)
-text(psm_thresh+.02,min(psm_pre3$Z.mean),label="PSM threshold", cex=1.2)
+plot(d$p.psm.mean, d$Z.mean, pch=19,col=d$psmcol, cex.lab=1.2,cex.axis=1.2,cex=2, 
+     ylab="Urbanization score (Z)", xlab= "Mean Pred.PSM")
+abline(v=input$psm_thresh, lty=2, lwd=2)
+text(input$psm_thresh+.02,min(d$Z.mean),label="PSM threshold", cex=1.2)
 abline(h=Zcrit, lty=2, lwd=2, col="blue")
 #text(psm_pre3$p.psm.mean, psm_pre3$Z.mean, labels=as.numeric(as.factor(psm_pre3$site)),cex=0.8, font=2)
-polygon(c(psm_thresh,1,1,psm_thresh),c(Zcrit,Zcrit,max(psm_pre3$Z.mean)+.5,max(psm_pre3$Z.mean)+.5),
+polygon(c(input$psm_thresh,1,1,input$psm_thresh),c(Zcrit,Zcrit,max(d$Z.mean)+.5,max(d$Z.mean)+.5),
         col=adjustcolor("salmon",alpha.f=0.5),
         border=NA)
 text(.02,Zcrit+.04,label="Zcrit", col="blue",cex=1.2)
 
 #plot change in Z vs benefit (first  benefit=spawner abundance)
-plot(psm_pre3$deltaZ, psm_pre3$spawn.n, cex=2,cex.lab=1.2,cex.axis=1.2,xlab=expression(paste("Change in urbanization required (",Delta,"Z)", sep="")), ylab= "Benefit = spawner abundance", type="p", pch=19, col=psm_pre3$psmcol)
+plot(d$deltaZ, d$spawn.n, cex=2,cex.lab=1.2,cex.axis=1.2,xlab=expression(paste("Change in urbanization required (",Delta,"Z)", sep="")), ylab= "Benefit = spawner abundance", type="p", pch=19, col=d$psmcol)
      ## Step 4. Compare to other benefits of interest- abundance or presence of other salmon species for all sites, human pops, stream biodiversity. Can blake get these?
-text(psm_pre3$deltaZ, psm_pre3$spawn.n, labels=as.numeric(as.factor(psm_pre3$site)),cex=0.8, font=2)
-polygon(c(0,0,min(psm_pre3$deltaZ),min(psm_pre3$deltaZ)),
-        c(0,max(psm_pre3$spawn.n),max(psm_pre3$spawn.n),0),col=adjustcolor("salmon",alpha.f=0.5),
+text(d$deltaZ, d$spawn.n, labels=as.numeric(as.factor(d$site)),cex=0.8, font=2)
+polygon(c(0,0,min(d$deltaZ),min(d$deltaZ)),
+        c(0,max(d$spawn.n),max(d$spawn.n),0),col=adjustcolor("salmon",alpha.f=0.5),
         border=NA)
+
+
+  #plot change in Z vs benefit (first  benefit=spawner abundance)
+quartz()
+mfrow=c(1,2)
+#restoration sites
+#sites with greater than threshold psm- in need of restoration. 
+r<-d[d$p.psm.mean>=input$psm_thresh,]
+r$newdeltaZ<--1*r$deltaZ
+rxy<-subset(r,select=c(newdeltaZ,spawn.n))
+rest.score<-as.matrix(dist(rbind(c(0,0),rxy), method="euclidean"))[1,-1]
+rxy<-cbind(rxy,rest.score)
+rxy<-rxy[order(rxy$rest.score),]
+myPalette <- colorRampPalette(brewer.pal(9, "RdYlGn")) #### Gives us a heat map look
+cols = myPalette(length(rest.score))
+rxy<- data.frame(cbind(rxy,cols))
+
+plot(rxy$deltaZ, rxy$spawn.n, cex=2,cex.lab=1.2,cex.axis=1.2,xlab="Effort", ylab= "Benefit = spawner abundance", type="p", pch=19, 
+     xlim=c(-2,0),col=rxy$cols)
+mtext(side=1,expression(paste("Change in urbanization required (",Delta,"Z)", sep="")),line=4)
+mtext(side=3,"Goal=Restoration",line=0)
+#conservatopn sites= those with below threshold psm
+c<-d[d$p.psm.mean<input$psm_thresh,]
+cxy<-subset(c,select=c(newdeltaZ,spawn.n))
+conscore<-as.matrix(dist(rbind(c(0,0),rxy), method="euclidean"))[1,-1]
+#Furthest greater delta - how to prioritize sites with deltaz in  this case?
+rxy<-cbind(rxy,rest.score)
+rxy<-rxy[order(rxy$rest.score),]
+myPalette <- colorRampPalette(brewer.pal(9, "RdYlGn")) #### Gives us a heat map look
+cols = myPalette(length(rest.score))
+rxy<- data.frame(cbind(rxy,cols))
+
+
+
+## Step 4. Compare to other benefits of interest- abundance or presence of other salmon species for all sites, human pops, stream biodiversity. Can blake get these?
+text(d$deltaZ, d$spawn.n, labels=as.numeric(as.factor(d$site)),cex=0.8, font=2)
+polygon(c(0,0,min(d$deltaZ),min(d$deltaZ)),
+        c(0,max(d$spawn.n),max(d$spawn.n),0),col=adjustcolor("salmon",alpha.f=0.5),
+        border=NA)
+
+
 ## Step 4. Compare to other benefits of interest- abundance or presence of other salmon species for all sites, human pops, stream biodiversity. Can blake get these?
 
 #plot change in Z vs benefit of number of people living nearby (don't have this data right now, so making it up as a function of Z with some noist)

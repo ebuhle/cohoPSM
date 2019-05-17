@@ -4,9 +4,11 @@ library(shiny)
 
 ## Read in the data/model estimates and join
 psm_pre<-read.table("../analysis/results/PSM_predictions.txt",header=TRUE)
-psm_pre3<-psm_pre[1:51,]
-#spawn<-read.csv("../data/spawner_data.csv", header=TRUE)
+spawn<-read.csv("data/spawner_data.csv", header=TRUE)
+spatial<-read.csv("data/spatial_data.csv", header=TRUE)
 
+#choose what data you want to include
+allsites=FALSE #if false, selects out only sites with PSM calculated from field data, rather than sites with predicted PSM too
 
 # 
 ui <- fluidPage(
@@ -50,24 +52,22 @@ server <- function(input, output) {
   #    re-executed when inputs (input$bins) change
   # 2. Its output type is a plot
   output$plot_psm_z <- renderPlot({
-    #create a variable of 0/1 for if PSM is less than threshold
-    psm_pre3$psmcol<-"darkred" 
-    psm_pre3$psmcol[psm_pre3$p.psm.mean<input$psm_thresh]<-"lightgreen"
-    Zcrit<-min(psm_pre$Z.mean[psm_pre$p.psm.mean>input$psm_thresh])
+    
+    
     
     ##Calculate difference between Z_mean and Zcrit (=deltaZ, or the change in Z required to get PSM to 40%)
-    psm_pre3$Zcrit<-Zcrit
-    psm_pre3$deltaZ<-psm_pre3$Zcrit-psm_pre3$Z.mean
+    d$Zcrit<-Zcrit
+    d$deltaZ<-d$Zcrit-d$Z.mean
     
-    plot(psm_pre3$p.psm.mean, psm_pre3$Z.mean, pch=19,col=psm_pre3$psmcol, cex.lab=1.2,cex.axis=1.2,cex=2, ylab="Urbanization effects (Z)", xlab= "Mean Pre-Spawn Mortality")
+    plot(d$p.psm.mean, d$Z.mean, pch=19,col=d$psmcol, cex.lab=1.2,cex.axis=1.2,cex=2, ylab="Urbanization effects (Z)", xlab= "Mean Pre-Spawn Mortality")
     
     abline(v=input$psm_thresh, lty=2, lwd=2)
     
-    text(input$psm_thresh+.02,min(psm_pre3$Z.mean),label="PSM threshold", cex=1.2)
+    text(input$psm_thresh+.02,min(d$Z.mean),label="PSM threshold", cex=1.2)
     
     abline(h=Zcrit, lty=2, lwd=2, col="blue")
     
-    polygon(c(input$psm_thresh,1,1,input$psm_thresh),c(Zcrit,Zcrit,max(psm_pre3$Z.mean)+.5,max(psm_pre3$Z.mean)+.5),
+    polygon(c(input$psm_thresh,1,1,input$psm_thresh),c(Zcrit,Zcrit,max(d$Z.mean)+.5,max(d$Z.mean)+.5),
             col=adjustcolor("salmon",alpha.f=0.5),
             border=NA)
     
