@@ -203,11 +203,6 @@ summary(glmm_psm, prob = c(0.025, 0.5, 0.975), pars = "beta", include = FALSE, d
 #+ calc_LL_glmm_psm, warning = FALSE
 ## @knitr calc_LL_glmm_psm
 LL_glmm_psm <- get_LL_glmm_psm(glmm_psm, data = psm_all_reg[psm_all_reg$data=="psm",])
-loo_glmm_psm <- loo(LL_glmm_psm, 
-                    r_eff = relative_eff(exp(LL_glmm_psm), 
-                                         chain_id = rep(1:dim(as.array(glmm_psm))[2], 
-                                                        each = dim(as.array(glmm_psm))[1])))
-loo_glmm_psm
 ## @knitr ignore
 
 #' # Structural Equation Models for Landscape Attributes and PSM
@@ -231,7 +226,7 @@ loo_glmm_psm
 ## @knitr stan_data_psm_roads
 # nonnegative continuous data:
 # scale to SD = 1, bound away from 0
-X <- as.matrix(lulc_roads_data[,c("roads1","roads2","roads3","roads4","roads5","traffic")])
+X <- as.matrix(lulc_roads_data[,c("roads1","roads2","roads4","roads5","traffic")])
 X <- sweep(X, 2, apply(X, 2, sd), "/")
 X[X==0] <- 1e-4
 X <- sweep(X, 2, apply(X, 2, sd), "/")
@@ -241,23 +236,23 @@ normal_indx <- NULL
 gamma_indx <- 1:ncol(X)
 
 # Data for Stan
-stan_dat <- list(S = nrow(X), 
-                 D_normal = length(normal_indx), D_gamma = length(gamma_indx),
-                 X = X, 
-                 L = 1,  # user-specified!
-                 N = nrow(psm), 
-                 site = as.numeric(psm$site),
-                 ppt_su = array(as.vector(scale(psm$ppt_su/10, scale = FALSE)), dim = nrow(psm)),
-                 ppt_fa = array(as.vector(scale(psm$ppt_fa/10, scale = FALSE)), dim = nrow(psm)),
-                 I0_Z = 1,
-                 I_su = 1,
-                 I_su_Z = 1,
-                 I_fa = 1,
-                 I_fa_Z = 1,
-                 n = psm$n,
-                 n_psm = psm$n_psm,
-                 I_fit = rep(1, nrow(psm)),
-                 I_lpd = rep(1, nrow(psm)))
+stan_dat_roads <- list(S = nrow(X), 
+                       D_normal = length(normal_indx), D_gamma = length(gamma_indx),
+                       X = X, 
+                       L = 1,  # user-specified!
+                       N = nrow(psm), 
+                       site = as.numeric(psm$site),
+                       ppt_su = array(as.vector(scale(psm$ppt_su/10, scale = FALSE)), dim = nrow(psm)),
+                       ppt_fa = array(as.vector(scale(psm$ppt_fa/10, scale = FALSE)), dim = nrow(psm)),
+                       I0_Z = 1,
+                       I_su = 1,
+                       I_su_Z = 1,
+                       I_fa = 1,
+                       I_fa_Z = 1,
+                       n = psm$n,
+                       n_psm = psm$n_psm,
+                       I_fit = rep(1, nrow(psm)),
+                       I_lpd = rep(1, nrow(psm)))
 ## @knitr ignore
 
 #' Fit SEM with roads and traffic to sites with PSM observations
@@ -265,8 +260,8 @@ stan_dat <- list(S = nrow(X),
 ## @knitr stan_psm_roads
 # Fit it!
 stan_psm_roads <- stan(file = here("analysis","cohoPSM_SEM.stan"),
-                       data = stan_dat, 
-                       init = lapply(1:3, function(i) stan_init(stan_dat)),
+                       data = stan_dat_roads, 
+                       init = lapply(1:3, function(i) stan_init(stan_dat_roads)),
                        pars = c("a0","A","Z","phi","g_mu_X",
                                 "mu_b0","b0_Z","sigma_b0","b0",
                                 "mu_b_su","b_su_Z","sigma_b_su","b_su",
@@ -282,6 +277,39 @@ print(stan_psm_roads, prob = c(0.025, 0.5, 0.975),
 # Save stanfit
 save(stan_psm_roads, file = here("analysis","results","stan_psm_roads.RData"))
 ## @knitr ignore
+
+#' # Model Selection
+#' ## In-Sample Model Selection
+
+#' Fit all three candidate models to sites with PSM observations,
+#' compare expected out-of-sample performance via PSIS-LOO
+
+## @knitr loo_psm
+loo_psm <- list(stan_psm = loo(stan_psm, pars = "ll_psm", 
+                               r_eff = relative_eff(as.array(stan_psm, pars = "ll_psm"))),
+                stan_psm_roads = loo(stan_psm_roads, pars = "ll_psm", 
+                               r_eff = relative_eff(as.array(stan_psm_roads, pars = "ll_psm"))),
+                glmm_psm = loo(LL_glmm_psm, 
+                               r_eff = relative_eff(exp(LL_glmm_psm), 
+                                                    chain_id = rep(1:dim(as.array(glmm_psm))[2], 
+                                                                   each = dim(as.array(glmm_psm))[1]))))
+
+compare(loo_psm$stan_psm, loo_psm$stan_psm_roads)
+compare(loo_psm$stan_psm, loo_psm$glmm_psm)
+
+#' ## K-fold cross-validation over SITES
+
+#' Leave out one or more sites of PSM data at a time,
+#' fit candidate models to training data and evaluate log posterior
+#' predictive density for the held-out observations.
+#' Sites are randomly partitioned into K = 10 groups that are
+#' roughly similar in size (i.e., number of observations).
+
+
+
+
+
+
 
 
 
