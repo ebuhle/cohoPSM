@@ -1,4 +1,7 @@
-#+ setup
+#----------------
+# SETUP
+#----------------
+
 if(.Platform$OS.type == "windows") options(device=windows)
 options(mc.cores = parallel::detectCores(logical = FALSE) - 1)
 library(rstan)
@@ -33,19 +36,17 @@ if(file.exists(here("analysis","results","stan_psm_all.RData"))) {
   load(here("analysis","results","stan_psm_all.RData"))
   eval_stan_psm_all <- FALSE
 }
-#+ include = FALSE
 
 #==================================================================
 # STRUCTURAL EQUATION MODELS FOR LANDSCAPE DATA AND PSM
 #==================================================================
 
-#'------------------------------------------------------
-#' Assemble data for sites with PSM observations
-#' in Stan-friendly format
-#'------------------------------------------------------
-#+ stan_data_psm_sites
-## @knitr stan_data_psm_sites
+#------------------------------------------------------
+# Assemble data for sites with PSM observations
+# in Stan-friendly format
+#------------------------------------------------------
 
+## @knitr stan_data_psm_sites
 # site-level covariates
 
 # composition data (multiple categories):
@@ -105,12 +106,11 @@ stan_dat <- list(S = nrow(X),
 ## @knitr ignore
 
 
-#'------------------------------------------------------
-#' Function to generate initial values for SEM
-#'------------------------------------------------------
-#+ stan_init
-## @knitr
+#------------------------------------------------------
+# Function to generate initial values for SEM
+#------------------------------------------------------
 
+## @knitr stan_init
 # Function to generate initial values for chains
 stan_init <- function(stan_dat) 
 {
@@ -141,12 +141,11 @@ stan_init <- function(stan_dat)
 }
 ## @knitr ignore
 
-#'------------------------------------------------------
-#' Fit full model to sites with PSM observations
-#'------------------------------------------------------
-#+ stan_psm_r2r, eval = eval_stan_psm
-## @knitr stan_psm_r2r
+#------------------------------------------------------
+# Fit full model to sites with PSM observations
+#------------------------------------------------------
 
+## @knitr stan_psm_r2r
 # Fit it!
 stan_psm <- stan(file = here("analysis","cohoPSM_SEM.stan"),
                  data = stan_dat, 
@@ -167,12 +166,11 @@ print(stan_psm, prob = c(0.025, 0.5, 0.975),
 save(stan_psm, file = here("analysis","results","stan_psm.RData"))
 ## @knitr ignore
 
-#'------------------------------------------------------------------
-#' In-sample model selection:
-#' Fit all candidate models to sites with PSM observations,
-#' compare expected out-of-sample performance via WAIC and PSIS-LOO
-#'------------------------------------------------------------------
-#+ waic_loo_r2r, eval = eval_waic_loo
+#------------------------------------------------------------------
+# In-sample model selection:
+# Fit all candidate models to sites with PSM observations,
+# compare expected out-of-sample performance via WAIC and PSIS-LOO
+#------------------------------------------------------------------
 
 # Create list to store results
 stan_psm_list <- vector("list", 18)
@@ -254,11 +252,10 @@ format(stan_psm_mods, nsmall = 2, digits = 2)
 save(stan_psm_list, stan_psm_mods, file = here("analysis","results","stan_psm_WAIC_LOO.RData"))
 
 
-#'---------------------------------------------------------------------
-#' Function to generate initial values for SEM for cross-validation,
-#' using previously fitted full model 
-#'---------------------------------------------------------------------
-#+ stan_init_cv
+#---------------------------------------------------------------------
+# Function to generate initial values for SEM for cross-validation,
+# using previously fitted full model 
+#---------------------------------------------------------------------
 
 stan_init_cv <- function(fit)
 {
@@ -293,13 +290,12 @@ stan_init_cv <- function(fit)
 }
 
 
-#'---------------------------------------------------------------------
-#' K-fold cross-validation over YEARS:
-#' Leave out one year of PSM data at a time,
-#' fit candidate models to training data and evaluate log posterior
-#' predictive density for the held-out observations
-#'---------------------------------------------------------------------
-#+ cv_year_r2r, eval = eval_cv_year
+#---------------------------------------------------------------------
+# K-fold cross-validation over YEARS:
+# Leave out one year of PSM data at a time,
+# fit candidate models to training data and evaluate log posterior
+# predictive density for the held-out observations
+#---------------------------------------------------------------------
 
 # Shortlist of candidate models chosen by consensus between in-sample WAIC and LOO
 stan_psm_cv_year_list <- vector("list", 4)
@@ -310,7 +306,7 @@ names(stan_psm_cv_year_list) <- c("100","1Z0","ZZ1","ZZZ")
 for(i in 1:length(stan_psm_cv_year_list))
 {
   stan_psm_cv_year_list[[i]] <- list(fit = vector("list",length(unique(psm$year))), 
-                                     ll_psm = matrix(NA, 3000, nrow(psm)),
+                                     ll_psm = matrix(NA, 6000, nrow(psm)),
                                      elpd = NULL)
   names(stan_psm_cv_year_list[[i]]$fit) <- sort(unique(psm$year))
   stan_dat_cv_year <- stan_dat
@@ -348,7 +344,7 @@ for(i in 1:length(stan_psm_cv_year_list))
     
     # Store fitted object and log-likelihood matrix
     stan_psm_cv_year_list[[i]]$fit[[as.character(j)]] <- fit
-    stan_psm_cv_year_list[[i]]$ll_psm[,psm$year == j] <- matrix(extract1(fit,"ll_psm"), nrow = 3000)
+    stan_psm_cv_year_list[[i]]$ll_psm[,psm$year == j] <- as.matrix(fit,"ll_psm")
   }
   
   # Average the posterior predictive density (not log density!) across posterior samples,
@@ -381,15 +377,14 @@ stan_psm_cv_year_mods
 save(stan_psm_cv_year_list, stan_psm_cv_year_mods, file = here("analysis","results","stan_psm_cv_year.RData"))
 
 
-#'---------------------------------------------------------------------
-#' K-fold cross-validation over SITES:
-#' Leave out one or more sites of PSM data at a time,
-#' fit candidate models to training data and evaluate log posterior
-#' predictive density for the held-out observations.
-#' Sites are randomly partitioned into K = 10 groups that are
-#' roughly similar in size (i.e., number of observations).
-#'---------------------------------------------------------------------
-#+ cv_site_r2r, eval = eval_cv_site
+#---------------------------------------------------------------------
+# K-fold cross-validation over SITES:
+# Leave out one or more sites of PSM data at a time,
+# fit candidate models to training data and evaluate log posterior
+# predictive density for the held-out observations.
+# Sites are randomly partitioned into K = 10 groups that are
+# roughly similar in size (i.e., number of observations).
+#---------------------------------------------------------------------
 
 # Randomly partition sites into groups
 KfoldCV_partition <- function(psm_dat, K, N_random = 1000)
@@ -435,7 +430,7 @@ for(i in 1:length(stan_psm_cv_site_list))
 {
   stan_psm_cv_site_list[[i]] <- list(fit = vector("list",length(unique(site_group))),
                                      site_group = site_group,
-                                     ll_psm = matrix(NA, 3000, nrow(psm)),
+                                     ll_psm = matrix(NA, 6000, nrow(psm)),
                                      elpd = NULL)
   names(stan_psm_cv_site_list[[i]]$fit) <- sort(unique(site_group))
   stan_dat_cv_site <- stan_dat
@@ -454,7 +449,8 @@ for(i in 1:length(stan_psm_cv_site_list))
     
     # Fit model
     cat("Working on model ", i, "/", length(stan_psm_cv_site_list), " and hold-out group ", 
-        j, "/", length(unique(site_group)), " (see Viewer for progress) \n\n", sep = "")
+        grep(j, sort(unique(psm$year))), "/", length(unique(site_group)), 
+        " (see Viewer for progress) \n\n", sep = "")
     fit <- stan(file = here("analysis","cohoPSM_SEM.stan"),
                 data = stan_dat_cv_site, 
                 init = lapply(1:3,function(i) stan_init_cv(stan_psm)),
@@ -472,7 +468,7 @@ for(i in 1:length(stan_psm_cv_site_list))
     
     # Store fitted object and log-likelihood matrix
     stan_psm_cv_site_list[[i]]$fit[[as.character(j)]] <- fit
-    stan_psm_cv_site_list[[i]]$ll_psm[,site_group == j] <- matrix(extract1(fit,"ll_psm"), nrow = 3000)
+    stan_psm_cv_site_list[[i]]$ll_psm[,site_group == j] <- as.matrix(fit,"ll_psm")
   }
   
   # Average the posterior predictive density (not log density!) across posterior samples,
@@ -505,13 +501,12 @@ stan_psm_cv_site_mods
 save(stan_psm_cv_site_list, stan_psm_cv_site_mods, file = here("analysis","results","stan_psm_cv_site.RData"))
 
 
-#'------------------------------------------------------
-#' Assemble data for sites with PSM observations
-#' in Stan-friendly format
-#'------------------------------------------------------
-#+ stan_data_all_sites
-## @knitr stan_data_all_sites
+#------------------------------------------------------
+# Assemble data for sites with PSM observations
+# in Stan-friendly format
+#------------------------------------------------------
 
+## @knitr stan_data_all_sites
 # site-level covariates
 
 # composition data (multiple categories):
@@ -572,14 +567,13 @@ stan_dat_all <- list(S = nrow(X_all),
 ## @knitr ignore
 
 
-#'---------------------------------------------------------
-#' Fit "best" (in fact, the full) model to sites with 
-#' PSM observations plus unsampled sites to generate 
-#' predictions for the latter
-#'---------------------------------------------------------
-#+ stan_psm_all_r2r, eval = eval_stan_psm_all
-## @knitr stan_psm_all_r2r
+#---------------------------------------------------------
+# Fit "best" (in fact, the full) model to sites with 
+# PSM observations plus unsampled sites to generate 
+# predictions for the latter
+#---------------------------------------------------------
 
+## @knitr stan_psm_all_r2r
 # Fit it!
 stan_psm_all <- stan(file = here("analysis","cohoPSM_SEM.stan"),
                      data = stan_dat_all, 
@@ -618,14 +612,13 @@ write.table(psm_pre, here("results","PSM_predictions.txt"), sep="\t", row.names=
 ## @knitr ignore
 
 
-#'==================================================================
-#' FIGURES
-#'==================================================================
+#==================================================================
+# FIGURES
+#==================================================================
 
-#'-----------------------------------------
-#' Posteriors of loadings
-#'-----------------------------------------
-#+ loadings, fig.width = 10, fig.height = 10, out.width = "60%", dpi = 300
+#-----------------------------------------
+# Posteriors of loadings
+#-----------------------------------------
 
 dev.new(width=10, height=10)
 # png(filename=here("results","loadings.png"), width=10, height=10, units = "in", res=300, type="cairo-png")
@@ -663,10 +656,9 @@ legend("topleft", legend="", title="B", bty="n", cex=2)
 rm(A);rm(bxp_dat);rm(gamma_labels);rm(normal_labels)
 # dev.off()
 
-#'---------------------------------------------------------
-#' Observed vs. posterior mean P(PSM) under "full" model
-#'---------------------------------------------------------
-#+ PSM_obs_vs_fit, fig.width = 10, fig.height = 10, out.width = "60%", dpi = 300
+#---------------------------------------------------------
+# Observed vs. posterior mean P(PSM) under "full" model
+#---------------------------------------------------------
 
 dev.new(width=10, height=10)
 # png(filename=here("results","PSM_obs_vs_fit.png"), width=10, height=10, units="in", res=300, type="cairo-png")
@@ -691,10 +683,9 @@ text(lgd$rect$left, lgd$rect$top, pos = 4, "N females", cex = 1.2*par("cex"))
 rm(cc);rm(lgd)
 # dev.off()
 
-#'----------------------------------------------------------------------------------------------
-#' Plots of site-level intercept and slope estimates against site-level LU/LC factor scores
-#'----------------------------------------------------------------------------------------------
-#+ psm_site_level_regressions, fig.width = 5.25, fig.height = 11.25, out.width = "60%", dpi = 300
+#----------------------------------------------------------------------------------------------
+# Plots of site-level intercept and slope estimates against site-level LU/LC factor scores
+#----------------------------------------------------------------------------------------------
 
 dev.new(width=7,height=15)
 # png(filename=here("results","psm_site_level_regressions.png"), width=7*0.75, height=15*0.75, units="in", res=300, type="cairo-png")
@@ -777,14 +768,13 @@ legend("topleft", legend = "", title =  "C", cex=2.2, bty="n")
 rm(list=c("mod","site","fits","cc"))
 # dev.off()
 
-#'---------------------------------------------------------
-#' Posterior predictive checking:
-#' Simulate data (n_psm and X) from the "full" model,
-#' then plot the actual data against the predictions
-#' (with posterior predictive credible intervals)
-#'---------------------------------------------------------
-#+ pp_check_psm, fig.width = 7, fig.height = 7, out.width = "60%"
- 
+#---------------------------------------------------------
+# Posterior predictive checking:
+# Simulate data (n_psm and X) from the "full" model,
+# then plot the actual data against the predictions
+# (with posterior predictive credible intervals)
+#---------------------------------------------------------
+
 # PSM data
 mod <- stan_psm
 pp_p_psm <- extract1(mod, "p_psm")
@@ -799,7 +789,6 @@ segments(psm$n_psm, apply(pp_n_psm, 2, quantile, 0.025),
 abline(0,1,col="gray")
 
 
-#+ pp_check_lulc, fig.width = 12, fig.height = 10, out.width = "60%"
 # LU/LC data (transformed, i.e. the X matrix)
 pp_g_mu_X <- extract1(mod, "g_mu_X")
 pp_phi <- extract1(mod, "phi")
@@ -826,10 +815,9 @@ for(j in 1:ncol(X))
 
 rm(list = c("mod","pp_p_psm","pp_n_psm","pp_g_mu_X","pp_phi","pp_X"))
 
-#'---------------------------------------------------------
-#' Correlation plot of landscape variables
-#'---------------------------------------------------------
-#+ landscape_corrplot, fig.width = 9, fig.height = 9, out.width = "60%", dpi = 200
+#---------------------------------------------------------
+# Correlation plot of landscape variables
+#---------------------------------------------------------
 
 c1 <- colorRampPalette(rev(c("#67001F", "#B2182B", "#D6604D", "#F4A582", "#FDDBC7",
                              "#FFFFFF", "#D1E5F0", "#92C5DE", "#4393C3", "#2166AC", "#053061")))(200)
