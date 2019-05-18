@@ -267,7 +267,7 @@ stan_init_cv <- function(fit)
   i <- sample(M,1)
   
   AA <- matrix(samples$A[i,,], nrow = dim(samples$A)[2], ncol = dim(samples$A)[3], byrow = TRUE)
-  AA <- AA[lower.tri(AA), diag = TRUE]
+  AA <- AA[lower.tri(AA, diag = TRUE)]
   logit_p_psm_hat <- stan_mean(fit,"logit_p_psm_hat")
   logit_p_psm <- qlogis(samples$p_psm[i,])
 
@@ -329,7 +329,8 @@ for(i in 1:length(stan_psm_cv_year_list))
     
     # Fit model
     cat("Working on model ", i, "/", length(stan_psm_cv_year_list), " and hold-out year ", 
-        j, "/", length(unique(psm$year)), " (see Viewer for progress) \n\n", sep = "")
+        grep(j, sort(unique(psm$year))), "/", length(unique(psm$year)), 
+        " (see Viewer for progress) \n\n", sep = "")
     fit <- stan(file = here("analysis","cohoPSM_SEM.stan"),
                 data = stan_dat_cv_year, 
                 init = lapply(1:3,function(i) stan_init_cv(stan_psm)),
