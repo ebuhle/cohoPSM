@@ -449,7 +449,7 @@ for(i in 1:length(stan_psm_cv_site_list))
     
     # Fit model
     cat("Working on model ", i, "/", length(stan_psm_cv_site_list), " and hold-out group ", 
-        grep(j, sort(unique(psm$year))), "/", length(unique(site_group)), 
+        grep(j, sort(unique(site_group))), "/", length(unique(site_group)), 
         " (see Viewer for progress) \n\n", sep = "")
     fit <- stan(file = here("analysis","cohoPSM_SEM.stan"),
                 data = stan_dat_cv_site, 
@@ -577,7 +577,7 @@ stan_dat_all <- list(S = nrow(X_all),
 # Fit it!
 stan_psm_all <- stan(file = here("analysis","cohoPSM_SEM.stan"),
                      data = stan_dat_all, 
-                     init = lapply(1:3, function(i) stan_init_all(stan_dat_all)),
+                     init = lapply(1:3, function(i) stan_init(stan_dat_all)),
                      pars = c("a0","A","Z","phi",
                               "mu_b0","b0_Z","sigma_b0",
                               "mu_b_su","b_su_Z","sigma_b_su",
@@ -608,7 +608,7 @@ psm_pre <- data.frame(site = site_names,
 
 # Save objects
 save(stan_psm_all, psm_pre, file = here("analysis","results","stan_psm_all.RData"))
-write.table(psm_pre, here("results","PSM_predictions.txt"), sep="\t", row.names=FALSE)
+write.table(psm_pre, here("analysis","results","PSM_predictions.txt"), sep="\t", row.names=FALSE)
 ## @knitr ignore
 
 
