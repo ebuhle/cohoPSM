@@ -1,6 +1,6 @@
-#----------------
+#==================================================================
 # SETUP
-#----------------
+#==================================================================
 
 if(.Platform$OS.type == "windows") options(device=windows)
 options(mc.cores = parallel::detectCores(logical = FALSE) - 1)
@@ -15,27 +15,16 @@ source(here("analysis","stan_mean.R"))
 source(here("analysis","extract1.R"))
 source(here("analysis","cohoPSM1_data.R"))  # read and wrangle data
 # load previously saved stanfit objects
-# and don't re-evaluate those code chunks
-if(file.exists(here("analysis","results","stan_psm.RData"))) {
+if(file.exists(here("analysis","results","stan_psm.RData")))
   load(here("analysis","results","stan_psm.RData"))
-  eval_stan_psm <- FALSE
-}
-if(file.exists(here("analysis","results","stan_psm_WAIC_LOO.RData"))) {
+if(file.exists(here("analysis","results","stan_psm_WAIC_LOO.RData")))
   load(here("analysis","results","stan_psm_WAIC_LOO.RData"))
-  eval_waic_loo <- FALSE
-}
-if(file.exists(here("analysis","results","stan_psm_cv_year.RData"))) {
+if(file.exists(here("analysis","results","stan_psm_cv_year.RData")))
   load(here("analysis","results","stan_psm_cv_year.RData"))
-  eval_cv_year <- FALSE
-}
-if(file.exists(here("analysis","results","stan_psm_cv_site.RData"))) {
+if(file.exists(here("analysis","results","stan_psm_cv_site.RData")))
   load(here("analysis","results","stan_psm_cv_site.RData"))
-  eval_cv_site <- FALSE
-}
-if(file.exists(here("analysis","results","stan_psm_all.RData"))) {
+if(file.exists(here("analysis","results","stan_psm_all.RData")))
   load(here("analysis","results","stan_psm_all.RData"))
-  eval_stan_psm_all <- FALSE
-}
 
 #==================================================================
 # STRUCTURAL EQUATION MODELS FOR LANDSCAPE DATA AND PSM
@@ -140,6 +129,7 @@ stan_init <- function(stan_dat)
   })
 }
 ## @knitr ignore
+save(stan_init, file = here("analysis","stan_init.RData"))
 
 #------------------------------------------------------
 # Fit full model to sites with PSM observations
@@ -289,6 +279,8 @@ stan_init_cv <- function(fit)
             logit_p_psm_std = array((logit_p_psm - logit_p_psm_hat) / sigma_psm[i], dim = length(logit_p_psm))))
 }
 
+save(stan_init_cv, file = here("analysis","stan_init_cv.RData"))
+
 
 #---------------------------------------------------------------------
 # K-fold cross-validation over YEARS:
@@ -414,6 +406,8 @@ KfoldCV_partition <- function(psm_dat, K, N_random = 1000)
   grp <- grps[,which.min(range_N_grp)]
   return(list(N_group = tapply(N_site, grp, sum), group = grp[match(psm$site, levels(psm$site))]))
 }
+
+save(KfoldCV_partition, file = here("analysis","KfoldCV_partition.RData"))
 
 partitions <- KfoldCV_partition(psm_dat = psm, K = 10)
 partitions  # check that the procedure found a "good" partition (roughly equal group sizes)
