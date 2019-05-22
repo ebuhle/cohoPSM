@@ -54,7 +54,7 @@ ui <- pageWithSidebar(
                   selected="Restoration"),
       
       # Input: Selector for variable to plot against mpg ----
-      selectInput("benefit", "Benefits:", 
+      selectInput("benefit", "Benefit:", 
                   names(dsubs[,6:8]),
                   selected=names(dsubs[,6:8])[1]),
       
