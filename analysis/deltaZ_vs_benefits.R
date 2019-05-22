@@ -66,7 +66,7 @@ text(d$deltaZ, d$spawn.n, labels=as.numeric(as.factor(d$site)),cex=0.8, font=2)
 polygon(c(0,0,min(d$deltaZ),min(d$deltaZ)),
         c(0,max(d$spawn.n),max(d$spawn.n),0),col=adjustcolor("salmon",alpha.f=0.5),
         border=NA)
-
+head(d)
 
 #plot change in Z vs benefit of number of people living nearby (don't have this data right now, so making it up as a function of Z with some noist)
 #plot(psm_pre3$Z.mean,pop.pred)#check
@@ -79,40 +79,75 @@ polygon(c(0,0,min(d$deltaZ),min(d$deltaZ)),
 dev.off()
 
   #plot change in Z vs benefit (first  benefit=spawner abundance)
-quartz()
-mfrow=c(1,2)
+quartz(height=5,width=10)
+par(mfrow=c(1,2))
 #restoration sites
 #sites with greater than threshold psm- in need of restoration. 
 r<-d[d$p.psm.mean>=input$psm_thresh,]
-r$newdeltaZ<--1*r$deltaZ
-rxy<-subset(r,select=c(newdeltaZ,spawn.n))
-rest.score<-as.matrix(dist(rbind(c(0,0),rxy), method="euclidean"))[1,-1]
-rxy<-cbind(rxy,rest.score)
+#standardizgin the effort and the benefit, so that they are equally weighted...we can decide if we want to weight things differently.
+
+r$deltaZ.stan<-(r$deltaZ-mean(r$deltaZ))/sd(r$deltaZ)
+r$spawn.n.stan<-(r$spawn.n-mean(r$spawn.n))/sd(r$spawn.n)
+rxy<-subset(r,select=c(deltaZ.stan,spawn.n.stan))
+rest.score<-as.matrix(dist(rbind(c(0,max(rxy$deltaZ.stan)),rxy), method="euclidean"))[1,-1]
+rxy<-cbind(r$site,r$deltaZ,r$spawn.n,rxy,rest.score)
 rxy<-rxy[order(rxy$rest.score),]
 myPalette <- colorRampPalette(brewer.pal(9, "RdYlGn")) #### Gives us a heat map look
 cols = myPalette(length(rest.score))
 rxy<- data.frame(cbind(rxy,cols))
-
-plot(rxy$newdeltaZ, rxy$spawn.n, cex=2,cex.lab=1.2,cex.axis=1.2,xlab="Effort", ylab= "Benefit = spawner abundance", type="p", pch=19, col=rxy$cols)
+colnames(rxy)[1:3]<-c("site","deltaZ","benefit")
+plot(rxy$deltaZ, rxy$benefit, cex=2,cex.lab=1.2,cex.axis=1.2,xlim=range(rxy$deltaZ),xlab="Effort", ylab= "Benefit = spawner abundance", type="p", pch=19, col=rxy$cols)
 mtext(side=1,expression(paste("Change in urbanization required (",Delta,"Z)", sep="")),line=4)
-mtext(side=3,"Goal=Restoration",line=0)
+mtext(side=3,"Goal=Restoration",line=0, cex=1.2)
+mtext(side=1,"high",line=4,adj=0)
+mtext(side=1,"low",line=4,adj=1)
+#mtext(side=1,"Highest priority", line=-20, adj=.9, cex=1.2, col="darkgreen")
+legend("topright", legend=c("Highest priority","Lowest priority"), pch=19,col=c(cols[length(cols)],cols[1]))
+text(rxy$deltaZ, rxy$benefit, labels=as.numeric(as.factor(rxy$site)),cex=0.8, font=2)
 
+spawnscore<-as.data.frame(cbind(rxy$site,rxy$rest.score))
+colnames(spawnscore)<-c("site","restscore.spawners")
 
-#conservatopn sites= those with below threshold psm
-c<-d[d$p.psm.mean<input$psm_thresh,]
-cxy<-subset(c,select=c(newdeltaZ,spawn.n))
-conscore<-as.matrix(dist(rbind(c(0,0),rxy), method="euclidean"))[1,-1]
-#Furthest greater delta - how to prioritize sites with deltaz in  this case?
-rxy<-cbind(rxy,rest.score)
+#now try for a different benefit: # of people nearby
+r$pop_census.stan<-(r$pop_census-mean(r$pop_lscan))/sd(r$pop_census)
+rxy<-subset(r,select=c(deltaZ.stan,pop_census.stan))
+rest.score<-as.matrix(dist(rbind(c(0,max(rxy$deltaZ.stan)),rxy), method="euclidean"))[1,-1]
+rxy<-cbind(r$site,r$deltaZ,r$pop_census,rxy,rest.score)
 rxy<-rxy[order(rxy$rest.score),]
 myPalette <- colorRampPalette(brewer.pal(9, "RdYlGn")) #### Gives us a heat map look
 cols = myPalette(length(rest.score))
 rxy<- data.frame(cbind(rxy,cols))
+colnames(rxy)[1:3]<-c("site","deltaZ","benefit")
+plot(rxy$deltaZ, rxy$benefit, cex=2,cex.lab=1.2,cex.axis=1.2,xlim=range(rxy$deltaZ),xlab="Effort", ylab= "Benefit = # of People Living Nearby", type="p", pch=19, col=rxy$cols)
+mtext(side=1,expression(paste("Change in urbanization required (",Delta,"Z)", sep="")),line=4)
+mtext(side=3,"Goal=Restoration",line=0, cex=1.2)
+mtext(side=1,"high",line=4,adj=0)
+mtext(side=1,"low",line=4,adj=1)
+text(rxy$deltaZ, rxy$benefit, labels=as.numeric(as.factor(rxy$site)),cex=0.8, font=2)
 
+peoplescore<-as.data.frame(cbind(rxy$site,rxy$rest.score))
+colnames(peoplescore)<-c("site","restscore.people")
+rest.scores<-full_join(spawnscore,peoplescore)
+write.csv(rest.scores,"analysis/output/restscores.csv", row.names=FALSE)
+#conservation sites= those with below threshold psm
+c<-d[d$p.psm.mean<input$psm_thresh,]
+c$deltaZ.stan<-(c$deltaZ-mean(c$deltaZ))/sd(c$deltaZ)
+c$spawn.n.stan<-(c$spawn.n-mean(c$spawn.n))/sd(c$spawn.n)
+cxy<-subset(c,select=c(deltaZ.stan,spawn.n.stan))
+con.score<-as.matrix(dist(rbind(c(0,min(cxy$deltaZ.stan)),cxy), method="euclidean"))[1,-1]
+cxy<-cbind(c$site,c$deltaZ,c$spawn.n,cxy,con.score)
+cxy<-cxy[order(cxy$con.score),]
+myPalette <- colorRampPalette(brewer.pal(9, "RdYlGn")) #### Gives us a heat map look
+cols = myPalette(length(con.score))
+cxy<- data.frame(cbind(cxy,cols))
+colnames(cxy)[1:3]<-c("site","deltaZ","spawn.n")
+plot(cxy$deltaZ, cxy$spawn.n, cex=2,cex.lab=1.2,cex.axis=1.2,xlim=range(cxy$deltaZ),xlab="?", ylab= "Benefit = spawner abundance", type="p", pch=19, col=cxy$cols)
+mtext(side=1,expression(paste("Change in urbanization required (",Delta,"Z)", sep="")),line=4)
+mtext(side=3,"Goal=Conservation",line=0, cex=1.2)
+#mtext(side=1,"high",line=4,adj=0)
+#mtext(side=1,"low",line=4,adj=1)
 
-
-
-## I looked into salmon abunndance data from DWF stock inventory pops- no "bad sites" included. some good sites included...look into this more
+## I looked into salmon abundance data from DWF stock inventory pops- no "bad sites" included. some good sites included...look into this more
 badsites<-psm_pre[psm_pre$Z_mean>psm_thresh,]
 sitenames<-unique(psm_pre$site)[1:51]
 badsites<-badsites[1:24,]#just the sites with names

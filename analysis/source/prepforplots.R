@@ -2,9 +2,15 @@
 ## as a mock up of what we may want to do, use mean abundance of spawning salmon as the measure of abundance.
 spawnmn<-aggregate(spawn$n,list(spawn$site),mean)
 colnames(spawnmn)<-c("site", "spawn.n")
-
+spatial$site<-as.factor(spatial$site)
 ## merge in spawner data
-d<-full_join(psm_pre,spawnmn)
+if(allsites==FALSE){
+  psm_pre<-psm_pre[1:51,]
+  psm_pre$site<-factor(psm_pre$site)
+  d<-full_join(psm_pre,spawnmn)}
+if(allsites==TRUE){
+  d<-psm_pre
+  d<-full_join(psm_pre,spawnmn)}
 
 ## add in spatial data
 d<-full_join(d,spatial)
@@ -23,7 +29,7 @@ d$deltaZ<-d$Zcrit-d$Z.mean
 
 
 #If desired, use pared down psm_pre file, with just named sites (i.e. sites for which PSM was measured rather than predicted from mdoel)
-if(allsites==FALSE){d<-d[1:51,]}
+#if(allsites==FALSE){d<-d[1:51,]}
 
 #add a column for the colors to plot for whether or not site has below threshold psm
 d$psmcol<-"darkred" 

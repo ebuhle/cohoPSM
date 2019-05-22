@@ -6,7 +6,9 @@ library(shiny)
 psm_pre<-read.table("../analysis/results/PSM_predictions.txt",header=TRUE)
 spawn<-read.csv("../data/spawner_data.csv", header=TRUE)
 spatial<-read.csv("../data/spatial_data.csv", header=TRUE)
-source ("../analysis/source/prepforplots.R")
+#flags
+allsites=FALSE#if choose FALSE, then will only use the 51 sites for which there are observations of PSM
+
 
 #choose what data you want to include
 allsites=FALSE #if false, selects out only sites with PSM calculated from field data, rather than sites with predicted PSM too
@@ -55,6 +57,7 @@ server <- function(input, output) {
   output$plot_psm_z <- renderPlot({
     
     
+    source ("../analysis/source/prepforplots.R")
     
     ##Calculate difference between Z_mean and Zcrit (=deltaZ, or the change in Z required to get PSM to 40%)
     d$Zcrit<-Zcrit
