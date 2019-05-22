@@ -295,17 +295,18 @@ save(stan_psm_rt, file = here("analysis","results","stan_psm_rt.RData"))
 # now compare expected out-of-sample performance via PSIS-LOO
 
 ## @knitr loo_psm
-loo_psm <- list(stan_psm = loo(stan_psm, pars = "ll_psm", 
+loo_psm <- list(SEM_full = loo(stan_psm, pars = "ll_psm", 
                                r_eff = relative_eff(as.array(stan_psm, pars = "ll_psm"))),
-                stan_psm_rt = loo(stan_psm_rt, pars = "ll_psm", 
-                                  r_eff = relative_eff(as.array(stan_psm_rt, pars = "ll_psm"))),
-                glmm_psm = loo(LL_glmm_psm, 
-                               r_eff = relative_eff(exp(LL_glmm_psm), 
-                                                    chain_id = rep(1:dim(as.array(glmm_psm))[2], 
-                                                                   each = dim(as.array(glmm_psm))[1]))))
+                SEM_rt = loo(stan_psm_rt, pars = "ll_psm", 
+                             r_eff = relative_eff(as.array(stan_psm_rt, pars = "ll_psm"))),
+                GLMM = loo(LL_glmm_psm, 
+                           r_eff = relative_eff(exp(LL_glmm_psm), 
+                                                chain_id = rep(1:dim(as.array(glmm_psm))[2], 
+                                                               each = dim(as.array(glmm_psm))[1]))))
 
-compare(loo_psm$stan_psm, loo_psm$stan_psm_rt)
-compare(loo_psm$stan_psm, loo_psm$glmm_psm)
+compare(loo_psm$SEM_full, loo_psm$SEM_rt, loo_psm$GLMM)
+compare(loo_psm$SEM_full, loo_psm$SEM_rt)
+compare(loo_psm$SEM_full, loo_psm$GLMM)
 
 #---------------------------------------------------------------------
 # K-fold cross-validation over SITES:
