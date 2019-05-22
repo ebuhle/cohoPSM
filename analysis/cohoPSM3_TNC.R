@@ -26,6 +26,8 @@ if(file.exists(here("analysis","results","stan_psm.RData")))    # full SEM
   load(here("analysis","results","stan_psm.RData"))
 if(file.exists(here("analysis","results","stan_psm_rt.RData"))) # roads + traffic SEM
   load(here("analysis","results","stan_psm_rt.RData"))
+if(file.exists(here("analysis","results","stan_psm_tnc_cv_site.RData"))) # leave-site-out CV
+  load(here("analysis","results","stan_psm_tnc_cv_site.RData"))
 
 
 #=================================================================================
