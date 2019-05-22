@@ -18,6 +18,7 @@ options(stringsAsFactors = FALSE)
 ## libraries
 library(dplyr)
 library(RColorBrewer)
+library(colorRamps)
 ## Set working directory. Add in your own path in an if statement for your file structure
 if(length(grep("ailene", getwd())>0)) { setwd("~/Documents/GitHub/cohoPSM")}
 
@@ -96,7 +97,7 @@ myPalette <- colorRampPalette(brewer.pal(9, "RdYlGn")) #### Gives us a heat map 
 cols = myPalette(length(rest.score))
 rxy<- data.frame(cbind(rxy,cols))
 colnames(rxy)[1:3]<-c("site","deltaZ","benefit")
-plot(rxy$deltaZ, rxy$benefit, cex=2,cex.lab=1.2,cex.axis=1.2,xlim=range(rxy$deltaZ),xlab="Effort", ylab= "Benefit = spawner abundance", type="p", pch=19, col=rxy$cols)
+plot(rxy$deltaZ, rxy$benefit, cex=2,cex.lab=1.2,cex.axis=1.2,xlim=range(rxy$deltaZ),xlab="Effort", ylab= "Benefit = spawner abundance", type="p", pch=19, col=as.character(rxy$cols))
 mtext(side=1,expression(paste("Change in urbanization required (",Delta,"Z)", sep="")),line=4)
 mtext(side=3,"Goal=Restoration",line=0, cex=1.2)
 mtext(side=1,"high",line=4,adj=0)
