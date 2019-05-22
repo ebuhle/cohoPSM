@@ -20,10 +20,12 @@ load(here("analysis","stan_init_cv.RData"))
 load(here("analysis","KfoldCV_partition.RData"))
 source(here("analysis","cohoPSM1_data.R"))  # read and wrangle data
 # load previously saved stanfit objects
-if(file.exists(here("analysis","results","stan_psm.RData"))) # full SEM from Roads to Ruin paper
-  load(here("analysis","results","stan_psm.RData"))
-if(file.exists(here("analysis","results","glmm_psm.RData")))
+if(file.exists(here("analysis","results","glmm_psm.RData")))    # traffic GLMM
   load(here("analysis","results","glmm_psm.RData"))
+if(file.exists(here("analysis","results","stan_psm.RData")))    # full SEM
+  load(here("analysis","results","stan_psm.RData"))
+if(file.exists(here("analysis","results","stan_psm_rt.RData"))) # roads + traffic SEM
+  load(here("analysis","results","stan_psm_rt.RData"))
 
 
 #=================================================================================
@@ -95,7 +97,7 @@ head(lp_ranef)
 # What's going on here? Several of these values are almost identical to each other and/or to
 # values returned above for previously observed groups. Am I seeing things? Nope,
 # a pairs plot of these "randomly generated" values shows some distinctly nonrandom pattern:
- 
+
 pairs(lp_ranef, col = transparent("darkblue", 0.7), labels = paste("call", 1:5))
 
 #------------------------
@@ -123,7 +125,7 @@ posterior_linpred_newgroups <- function(object, newdata)
         ## won't work with sapply ## re_form <- re_form - formula(paste0("~ (1|", f, ")"))
         return(ng)
       }
-    })
+  })
   if(!all(newgroups))
     lp[,!newgroups] <- posterior_linpred(object, newdata = newdata[!newgroups,,drop = FALSE])
   if(any(newgroups)) {
@@ -170,75 +172,44 @@ get_LL_glmm_psm <- function(object, data = NULL, N_MC = 1000)
 # precip, traffic and log(traffic) centered and scaled to SD = 1 
 
 ## @knitr data_glmm_psm
-psm_all_reg <- transform(psm_all, ppt_su = scale(ppt_su), ppt_fa = scale(ppt_fa),
-                         traffic = scale(traffic), log_traffic = scale(log(pmax(traffic, 0.1))))
+psm_reg <- transform(psm, ID = 1:nrow(psm), ppt_su = scale(ppt_su), ppt_fa = scale(ppt_fa),
+                     traffic = scale(traffic), log_traffic = scale(log(pmax(traffic, 0.1))))
 ## @knitr ignore
 
 # Fit the "full" GLMM with summer and fall precip and log(traffic) as predictors.
 # This model has the same structure as the "GLMM-like" submodel of the SEM, but 
-# replaces the latent urbanization factor(s) with a single indicator variable, `traffic`.
-# (The log transformation is used to emulate the log link function used for `traffic` and
+# replaces the latent urbanization factor(s) with a single indicator variable, traffic.
+# (The log transformation is used to emulate the log link function used for traffic and
 # other gamma-distributed landscape variables in the "factor-analytic" submodel of the SEM.) 
 
 ## @knitr fit_glmm_psm
 glmm_psm <- stan_glmer(cbind(n_psm, n - n_psm) ~ (ppt_su + ppt_fa) * log_traffic + 
                          (ppt_su + ppt_fa || site) + (1 | ID),
-                       data = psm_all_reg, subset = data == "psm",
+                       data = psm_reg,
                        family = binomial("logit"),
                        prior_intercept = normal(0,3),
                        prior = normal(0,3),
                        prior_covariance = decov(),
-                       chains = 3, iter = 2000, warmup = 1000,
+                       chains = 3, iter = 3000, warmup = 1000,
                        control = list(adapt_delta = 0.9))
 
+# Inspect result
 print(glmm_psm, digits = 2)
 summary(glmm_psm, prob = c(0.025, 0.5, 0.975), pars = "beta", include = FALSE, digits = 2)
+
 ## @knitr ignore
+# Save stanreg object
+save(glmm_psm, file = here("analysis","results","glmm_psm.RData"))
 
 # Calculate the marginal log-likelihood of the observed PSM frequencies under the GLMM.
 
 ## @knitr calc_LL_glmm_psm
-LL_glmm_psm <- get_LL_glmm_psm(glmm_psm, data = psm_all_reg[psm_all_reg$data=="psm",])
+LL_glmm_psm <- get_LL_glmm_psm(glmm_psm)
 ## @knitr ignore
 
 #==================================================================
 # STRUCTURAL EQUATION MODELS FOR LANDSCAPE ATTRIBUTES AND PSM
 #==================================================================
-
-#------------------------------------------------------
-# Function to generate initial values for SEM
-#------------------------------------------------------
-
-## @knitr stan_init
-# Function to generate initial values for chains
-stan_init <- function(stan_dat) 
-{
-  with(stan_dat, {
-    # X <- t(X)
-    D <- D_normal + D_gamma
-    
-    list(a0 = rnorm(D, c(colMeans(X[,0:D_normal]), colMeans(log(X[,(D_normal+1):D]))), 1),
-         A_nid_vec = array(rnorm(D*L - L*(L-1)/2, 0, 1), dim = D*L - L*(L-1)/2),
-         Z_nid = matrix(rnorm(S*L, 0, 1), nrow = S, ncol = L),
-         phi = runif(D, 0.5, 1),
-         # mu_b0 = rnorm(1, qlogis(mean(n_psm/n, na.rm=T)), 1),
-         mu_b0 = rnorm(1, -3, 1),
-         b0_Z_nid = array(rnorm(L, 1, 0.5), dim = L),
-         sigma_b0 = runif(1, 1, 2),
-         b0_std = array(rnorm(S, 0, 0.1), dim = S),
-         mu_b_su = rnorm(1, 0.3, 0.1),
-         b_su_Z_nid = array(rnorm(L, -0.2, 0.1), dim = L),
-         sigma_b_su = runif(1, 0.1, 1),
-         b_su_std = array(rnorm(S, 0, 0.1), dim = S),
-         mu_b_fa = rnorm(1, 0.03, 0.02),
-         b_fa_Z_nid = array(rnorm(L, -0.03, 0.02), dim = L),
-         sigma_b_fa = runif(1, 0.02, 0.1),
-         b_fa_std = array(rnorm(S, 0, 0.1), dim = S),
-         sigma_psm = runif(1, 0.5, 2),
-         logit_p_psm_std = array(rnorm(N, 0, 0.1), dim = N))
-  })
-}
-## @knitr ignore
 
 #------------------------------------------------------
 # Model with roads and traffic only
@@ -266,49 +237,49 @@ normal_indx <- NULL
 gamma_indx <- 1:ncol(X)
 
 # Data for Stan
-stan_dat_roads <- list(S = nrow(X), 
-                       D_normal = length(normal_indx), D_gamma = length(gamma_indx),
-                       X = X, 
-                       L = 1,  # user-specified!
-                       N = nrow(psm), 
-                       site = as.numeric(psm$site),
-                       ppt_su = array(as.vector(scale(psm$ppt_su/10, scale = FALSE)), dim = nrow(psm)),
-                       ppt_fa = array(as.vector(scale(psm$ppt_fa/10, scale = FALSE)), dim = nrow(psm)),
-                       I0_Z = 1,
-                       I_su = 1,
-                       I_su_Z = 1,
-                       I_fa = 1,
-                       I_fa_Z = 1,
-                       n = psm$n,
-                       n_psm = psm$n_psm,
-                       I_fit = rep(1, nrow(psm)),
-                       I_lpd = rep(1, nrow(psm)))
+stan_dat_rt <- list(S = nrow(X), 
+                    D_normal = length(normal_indx), D_gamma = length(gamma_indx),
+                    X = X, 
+                    L = 1,  # user-specified!
+                    N = nrow(psm), 
+                    site = as.numeric(psm$site),
+                    ppt_su = array(as.vector(scale(psm$ppt_su/10, scale = FALSE)), dim = nrow(psm)),
+                    ppt_fa = array(as.vector(scale(psm$ppt_fa/10, scale = FALSE)), dim = nrow(psm)),
+                    I0_Z = 1,
+                    I_su = 1,
+                    I_su_Z = 1,
+                    I_fa = 1,
+                    I_fa_Z = 1,
+                    n = psm$n,
+                    n_psm = psm$n_psm,
+                    I_fit = rep(1, nrow(psm)),
+                    I_lpd = rep(1, nrow(psm)))
 ## @knitr ignore
 
 #-------------------------------------------------------------------
 # Fit SEM with roads and traffic to sites with PSM observations
 #-------------------------------------------------------------------
 
-## @knitr stan_psm_roads
+## @knitr stan_psm_rt
 # Fit it!
-stan_psm_roads <- stan(file = here("analysis","cohoPSM_SEM.stan"),
-                       data = stan_dat_roads, 
-                       init = lapply(1:3, function(i) stan_init(stan_dat_roads)),
-                       pars = c("a0","A","Z","phi","g_mu_X",
-                                "mu_b0","b0_Z","sigma_b0","b0",
-                                "mu_b_su","b_su_Z","sigma_b_su","b_su",
-                                "mu_b_fa","b_fa_Z","sigma_b_fa","b_fa",
-                                "sigma_psm","p_psm","ll_psm"), 
-                       chains = 3, iter = 12000, warmup = 2000, thin = 5)
+stan_psm_rt <- stan(file = here("analysis","cohoPSM_SEM.stan"),
+                    data = stan_dat_rt, 
+                    init = lapply(1:3, function(i) stan_init(stan_dat_rt)),
+                    pars = c("a0","A","Z","phi","g_mu_X",
+                             "mu_b0","b0_Z","sigma_b0","b0",
+                             "mu_b_su","b_su_Z","sigma_b_su","b_su",
+                             "mu_b_fa","b_fa_Z","sigma_b_fa","b_fa",
+                             "sigma_psm","p_psm","ll_psm"), 
+                    chains = 3, iter = 12000, warmup = 2000, thin = 5)
 
 # Inspect and use shinystan to explore samples
-print(stan_psm_roads, prob = c(0.025, 0.5, 0.975), 
+print(stan_psm_rt, prob = c(0.025, 0.5, 0.975), 
       pars = c("b0","b_su","b_ppt_su","b_fa","b_ppt_fa","g_mu_X","p_psm","ll_psm","Z"), include = F)
-# launch_shinystan(stan_psm_roads)
+# launch_shinystan(stan_psm_rt)
 
-# Save stanfit
-save(stan_psm_roads, file = here("analysis","results","stan_psm_roads.RData"))
 ## @knitr ignore
+# Save stanfit
+save(stan_psm_rt, file = here("analysis","results","stan_psm_rt.RData"))
 
 #==================================================================
 # Model Selection
@@ -324,23 +295,129 @@ save(stan_psm_roads, file = here("analysis","results","stan_psm_roads.RData"))
 ## @knitr loo_psm
 loo_psm <- list(stan_psm = loo(stan_psm, pars = "ll_psm", 
                                r_eff = relative_eff(as.array(stan_psm, pars = "ll_psm"))),
-                stan_psm_roads = loo(stan_psm_roads, pars = "ll_psm", 
-                               r_eff = relative_eff(as.array(stan_psm_roads, pars = "ll_psm"))),
+                stan_psm_rt = loo(stan_psm_rt, pars = "ll_psm", 
+                                  r_eff = relative_eff(as.array(stan_psm_rt, pars = "ll_psm"))),
                 glmm_psm = loo(LL_glmm_psm, 
                                r_eff = relative_eff(exp(LL_glmm_psm), 
                                                     chain_id = rep(1:dim(as.array(glmm_psm))[2], 
                                                                    each = dim(as.array(glmm_psm))[1]))))
 
-compare(loo_psm$stan_psm, loo_psm$stan_psm_roads)
+compare(loo_psm$stan_psm, loo_psm$stan_psm_rt)
 compare(loo_psm$stan_psm, loo_psm$glmm_psm)
 
-# ## K-fold cross-validation over SITES
-
+#---------------------------------------------------------------------
+# K-fold cross-validation over SITES:
 # Leave out one or more sites of PSM data at a time,
 # fit candidate models to training data and evaluate log posterior
 # predictive density for the held-out observations.
 # Sites are randomly partitioned into K = 10 groups that are
 # roughly similar in size (i.e., number of observations).
+#---------------------------------------------------------------------
+
+# Randomly partition sites into groups
+partitions <- KfoldCV_partition(psm_dat = psm, K = 10)
+partitions  # check that the procedure found a "good" partition (roughly equal group sizes)
+site_group <- partitions$group
+
+# List of candidate models
+stan_psm_cv_site_list <- vector("list", 3)
+names(stan_psm_cv_site_list) <- c("SEM_full","SEM_rt","GLMM")
+for(i in 1:length(stan_psm_cv_site_list))
+{
+  stan_psm_cv_site_list[[i]] <- list(fit = vector("list",length(unique(site_group))),
+                                     site_group = site_group,
+                                     ll_psm = matrix(NA, 6000, nrow(psm)),
+                                     elpd = NULL)
+  names(stan_psm_cv_site_list[[i]]$fit) <- sort(unique(site_group))
+}
+
+# Loop over groups of sites, fit each candidate model to training data, 
+# predict hold-out data, and store stanfit objects
+for(j in sort(unique(site_group)))
+{
+  cat("Working on hold-out group ", grep(j, sort(unique(site_group))), "/", 
+      length(unique(site_group)), " (see Viewer for progress) \n\n", sep = "")
+
+  # Modify data to be passed to SEMs
+  stan_dat_cv_site <- stan_dat
+  stan_dat_cv_site$I_fit <- as.numeric(site_group != j)  # training data
+  stan_dat_cv_site$I_lpd <- as.numeric(site_group == j)  # hold-out data
+  stan_dat_rt_cv_site <- stan_dat_rt
+  stan_dat_rt_cv_site$I_fit <- as.numeric(site_group != j)  # training data
+  stan_dat_rt_cv_site$I_lpd <- as.numeric(site_group == j)  # hold-out data
+  
+  ## Full SEM
+  # Fit
+  fit <- stan(file = here("analysis","cohoPSM_SEM.stan"),
+              data = stan_dat_cv_site, 
+              init = lapply(1:3,function(i) stan_init_cv(stan_psm)),
+              pars = c("a0","A","Z","phi","mu_b0","b0_Z","sigma_b0","b0",
+                  "mu_b_su","b_su_Z","sigma_b_su","b_su",
+                  "mu_b_fa","b_fa_Z","sigma_b_fa","b_fa",
+                  "sigma_psm","p_psm","ll_psm"),
+              chains = 3, iter = 12000, warmup = 2000, thin = 5,
+              control = list(stepsize = 0.05))
+  
+  # Store fitted object and log-likelihood matrix
+  stan_psm_cv_site_list$SEM_full$fit[[as.character(j)]] <- fit
+  stan_psm_cv_site_list$SEM_full$ll_psm[,site_group == j] <- as.matrix(fit,"ll_psm")
+
+  ## Roads + traffic SEM
+  # Fit
+  fit <- stan(file = here("analysis","cohoPSM_SEM.stan"),
+              data = stan_dat_rt_cv_site, 
+              init = lapply(1:3,function(i) stan_init_cv(stan_psm_rt)),
+              pars = c("a0","A","Z","phi","mu_b0","b0_Z","sigma_b0","b0",
+                       "mu_b_su","b_su_Z","sigma_b_su","b_su",
+                       "mu_b_fa","b_fa_Z","sigma_b_fa","b_fa",
+                       "sigma_psm","p_psm","ll_psm"),
+              chains = 3, iter = 12000, warmup = 2000, thin = 5,
+              control = list(stepsize = 0.05))
+  
+  # Store fitted object and log-likelihood matrix
+  stan_psm_cv_site_list$SEM_rt$fit[[as.character(j)]] <- fit
+  stan_psm_cv_site_list$SEM_rt$ll_psm[,site_group == j] <- as.matrix(fit,"ll_psm")
+  
+  ## GLMM
+  # Fit
+  fit <- update(glmm_psm, subset = site_group != j)
+  
+  # Store fitted object and log-likelihood matrix
+  stan_psm_cv_site_list$GLMM$fit[[as.character(j)]] <- fit
+  ll <- get_LL_glmm_psm(fit, data = psm_reg[site_group == j,])
+  stan_psm_cv_site_list$GLMM$ll_psm[,site_group == j] <- ll
+}
+
+# Average the posterior predictive density (not log density!) across posterior samples,
+# take the log, then sum across observations to get expected log predictive density
+for(i in 1:length(stan_psm_cv_site_list))
+  stan_psm_cv_site_list[[i]]$elpd <- sum(log(colMeans(exp(stan_psm_cv_site_list[[i]]$ll_psm))))
+
+# Summarize model comparison results
+stan_psm_cv_site_mods <- data.frame(model = names(stan_psm_cv_site_list),
+                                    elpd = sapply(stan_psm_cv_site_list,
+                                                  function(x) x$elpd),
+                                    se_elpd = sapply(stan_psm_cv_site_list, function(x) 
+                                      sqrt(ncol(x$ll_psm))*sd(log(colMeans(exp(x$ll_psm))))),
+                                    d_elpd = NA,
+                                    se_d_elpd = NA)
+
+for(i in 1:length(stan_psm_cv_site_list))
+{
+  stan_psm_cv_site_mods$d_elpd[i] <- stan_psm_cv_site_mods$elpd[i] - max(stan_psm_cv_site_mods$elpd)
+  m <- which.max(stan_psm_cv_site_mods$elpd)
+  devs <- log(colMeans(exp(stan_psm_cv_site_list[[i]]$ll_psm))) - 
+    log(colMeans(exp(stan_psm_cv_site_list[[m]]$ll_psm)))
+  stan_psm_cv_site_mods$se_d_elpd[i] <- sqrt(length(devs))*sd(devs)
+  rm(m);rm(devs)
+}
+
+stan_psm_cv_site_mods
+
+# Save objects
+save(stan_psm_cv_site_list, stan_psm_cv_site_mods, file = here("analysis","results","stan_psm_tnc_cv_site.RData"))
+
+
 
 
 
