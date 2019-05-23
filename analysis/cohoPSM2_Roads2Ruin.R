@@ -496,7 +496,8 @@ save(stan_psm_cv_site_list, stan_psm_cv_site_mods, file = here("analysis","resul
 
 
 #------------------------------------------------------
-# Assemble data for sites with PSM observations
+# Assemble data for all sites, including out-of sample
+# subbasins (no PSM observations) to be predicted,
 # in Stan-friendly format
 #------------------------------------------------------
 
