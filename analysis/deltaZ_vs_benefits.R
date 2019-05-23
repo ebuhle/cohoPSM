@@ -13,6 +13,7 @@
 #################################################################
 ## housekeeping
 rm(list=ls()) 
+options(device = ifelse(.Platform$OS.type == "windows", "windows", "quartz"))
 options(stringsAsFactors = FALSE)
 
 ## libraries
@@ -37,7 +38,7 @@ source(here("analysis","source","prepforplots.R"))
 dim(d)
 ## Step 4. Plot Change in Z on x-axis and benefits of interest on the y axis
 
-#quartz(height=8,width=16)
+#dev.new(height=8,width=16)
 pdf(here("analysis","results","testdeltaZvsbenefitsfig.pdf"), width = 16, height = 8)
 
 par(mfrow=c(1,3))
@@ -79,7 +80,7 @@ polygon(c(0,0,min(d$deltaZ),min(d$deltaZ)),
 dev.off()
 
   #plot change in Z vs benefit (first  benefit=spawner abundance)
-quartz(height=5,width=10)
+dev.new(height=5,width=10)
 par(mfrow=c(1,2))
 #restoration sites
 #sites with greater than threshold psm- in need of restoration. 
@@ -130,7 +131,7 @@ colnames(peoplescore)<-c("site","restscore.people")
 rest.scores<-full_join(spawnscore,peoplescore)
 write.csv(rest.scores,here("analysis","output","restscores.csv"), row.names=FALSE)
 #conservation sites= those with below threshold psm
-quartz(height=5,width=10)
+dev.new(height=5,width=10)
 par(mfrow=c(1,2))
 c<-d[d$p.psm.mean<input$psm_thresh,]
 c$deltaZ.stan<-(c$deltaZ-mean(c$deltaZ))/sd(c$deltaZ)

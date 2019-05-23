@@ -2,7 +2,7 @@
 # SETUP
 #==================================================================
 
-if(.Platform$OS.type == "windows") options(device=windows)
+options(device = ifelse(.Platform$OS.type == "windows", "windows", "quartz"))
 options(mc.cores = parallel::detectCores(logical = FALSE) - 1)
 library(rstan)
 library(loo)
