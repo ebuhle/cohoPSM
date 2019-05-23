@@ -13,12 +13,17 @@ library(brms)
 library(Hmisc)
 library(matrixStats)
 library(here)
-source(here("analysis","stan_mean.R"))
-source(here("analysis","extract1.R"))
-load(here("analysis","stan_init.RData"))
-load(here("analysis","stan_init_cv.RData"))
-load(here("analysis","KfoldCV_partition.RData"))
-source(here("analysis","cohoPSM1_data.R"))  # read and wrangle data
+
+# load functions
+source(here("analysis","functions","stan_mean.R"))
+source(here("analysis","functions","extract1.R"))
+source(here("analysis","functions","stan_init.R"))
+source(here("analysis","functions","stan_init_cv.R"))
+source(here("analysis","functions","kfold_partition.R"))
+
+# read and wrangle data
+source(here("analysis","cohoPSM1_data.R"))  
+
 # load previously saved stanfit objects
 if(file.exists(here("analysis","results","glmm_psm.RData")))    # traffic GLMM
   load(here("analysis","results","glmm_psm.RData"))
@@ -143,28 +148,7 @@ posterior_linpred_newgroups <- function(object, newdata)
 # Might as well just tailor it specifically for the PSM GLMM case.
 # The following function calculates the marginal log-likelihood of observed PSM frequencies
 # from a fitted stanreg object by Monte Carlo integration over the observation-level residuals.
-
-## @knitr get_LL_glmm_psm
-get_LL_glmm_psm <- function(object, data = NULL, N_MC = 1000)
-{
-  if(is.null(data)) data <- object$data
-  # random effects-only formula
-  re_formula <- reformulate(sapply(lme4::findbars(formula(object)),
-                                   function(f) paste("(", deparse(f), ")")))
-  # drop obs-level random effect (assumes re_formula contains other random terms)
-  re_formula <- update(re_formula, ~ . - (1|ID))
-  # posterior draws of linear predictor without obs-level random effect
-  lp <- posterior_linpred(object, newdata = data, re.form = re_formula)
-  # generate new obs-level residuals, calculate log of marginal likelihood
-  sigma_psm <- as.matrix(object, regex_pars= "Sigma\\[ID")
-  LL <- sapply(1:nrow(data), function(i) {
-    resid_psm_mc <- matrix(rnorm(nrow(sigma_psm)*N_MC, 0, sigma_psm), nrow(sigma_psm), N_MC)
-    p_psm_mc <- plogis(lp[,i] + resid_psm_mc)
-    LL_psm_mc <- dbinom(data$n_psm[i], data$n[i], p_psm_mc, log = TRUE)
-    return(matrixStats::rowLogSumExps(LL_psm_mc) - log(N_MC))
-  })
-}
-## @knitr ignore
+get_LL_glmm_psm
 
 #==================================================================
 # HIERARCHICAL REGRESSION MODELS FOR PSM 
@@ -264,7 +248,7 @@ stan_dat_rt <- list(S = nrow(X),
 
 ## @knitr stan_psm_rt
 # Fit it!
-stan_psm_rt <- stan(file = here("analysis","cohoPSM_SEM.stan"),
+stan_psm_rt <- stan(file = here("analysis","stan","cohoPSM_SEM.stan"),
                     data = stan_dat_rt, 
                     init = lapply(1:3, function(i) stan_init(stan_dat_rt)),
                     pars = c("a0","A","Z","phi","g_mu_X",
@@ -318,7 +302,7 @@ compare(loo_psm$SEM_full, loo_psm$GLMM)
 #---------------------------------------------------------------------
 
 # Randomly partition sites into groups
-partitions <- KfoldCV_partition(psm_dat = psm, K = 10)
+partitions <- kfold_partition(psm_dat = psm, K = 10)
 partitions  # check that the procedure found a "good" partition (roughly equal group sizes)
 site_group <- partitions$group
 
@@ -351,7 +335,7 @@ for(j in sort(unique(site_group)))
   
   ## Full SEM
   # Fit
-  fit <- stan(file = here("analysis","cohoPSM_SEM.stan"),
+  fit <- stan(file = here("analysis","stan","cohoPSM_SEM.stan"),
               data = stan_dat_cv_site, 
               init = lapply(1:3,function(i) stan_init_cv(stan_psm)),
               pars = c("a0","A","Z","phi","mu_b0","b0_Z","sigma_b0","b0",
@@ -367,7 +351,7 @@ for(j in sort(unique(site_group)))
 
   ## Roads + traffic SEM
   # Fit
-  fit <- stan(file = here("analysis","cohoPSM_SEM.stan"),
+  fit <- stan(file = here("analysis","stan","cohoPSM_SEM.stan"),
               data = stan_dat_rt_cv_site, 
               init = lapply(1:3,function(i) stan_init_cv(stan_psm_rt)),
               pars = c("a0","A","Z","phi","mu_b0","b0_Z","sigma_b0","b0",

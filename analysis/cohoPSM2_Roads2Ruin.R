@@ -11,9 +11,17 @@ library(rstanarm)
 library(Hmisc)
 library(corrplot)
 library(here)
-source(here("analysis","stan_mean.R"))
-source(here("analysis","extract1.R"))
-source(here("analysis","cohoPSM1_data.R"))  # read and wrangle data
+
+# load functions
+source(here("analysis","functions","stan_mean.R"))
+source(here("analysis","functions","extract1.R"))
+source(here("analysis","functions","stan_init.R"))
+source(here("analysis","functions","stan_init_cv.R"))
+source(here("analysis","functions","kfold_partition.R"))
+
+# read and wrangle data
+source(here("analysis","cohoPSM1_data.R"))  
+
 # load previously saved stanfit objects
 if(file.exists(here("analysis","results","stan_psm.RData")))
   load(here("analysis","results","stan_psm.RData"))
@@ -94,50 +102,13 @@ stan_dat <- list(S = nrow(X),
                  I_lpd = rep(1, nrow(psm)))
 ## @knitr ignore
 
-
-#------------------------------------------------------
-# Function to generate initial values for SEM
-#------------------------------------------------------
-
-## @knitr stan_init
-# Function to generate initial values for chains
-stan_init <- function(stan_dat) 
-{
-  with(stan_dat, {
-    # X <- t(X)
-    D <- D_normal + D_gamma
-    
-    list(a0 = rnorm(D, c(colMeans(X[,0:D_normal]), colMeans(log(X[,(D_normal+1):D]))), 1),
-         A_nid_vec = array(rnorm(D*L - L*(L-1)/2, 0, 1), dim = D*L - L*(L-1)/2),
-         Z_nid = matrix(rnorm(S*L, 0, 1), nrow = S, ncol = L),
-         phi = runif(D, 0.5, 1),
-         # mu_b0 = rnorm(1, qlogis(mean(n_psm/n, na.rm=T)), 1),
-         mu_b0 = rnorm(1, -3, 1),
-         b0_Z_nid = array(rnorm(L, 1, 0.5), dim = L),
-         sigma_b0 = runif(1, 1, 2),
-         b0_std = array(rnorm(S, 0, 0.1), dim = S),
-         mu_b_su = rnorm(1, 0.3, 0.1),
-         b_su_Z_nid = array(rnorm(L, -0.2, 0.1), dim = L),
-         sigma_b_su = runif(1, 0.1, 1),
-         b_su_std = array(rnorm(S, 0, 0.1), dim = S),
-         mu_b_fa = rnorm(1, 0.03, 0.02),
-         b_fa_Z_nid = array(rnorm(L, -0.03, 0.02), dim = L),
-         sigma_b_fa = runif(1, 0.02, 0.1),
-         b_fa_std = array(rnorm(S, 0, 0.1), dim = S),
-         sigma_psm = runif(1, 0.5, 2),
-         logit_p_psm_std = array(rnorm(N, 0, 0.1), dim = N))
-  })
-}
-## @knitr ignore
-save(stan_init, file = here("analysis","stan_init.RData"))
-
 #------------------------------------------------------
 # Fit full model to sites with PSM observations
 #------------------------------------------------------
 
 ## @knitr stan_psm_r2r
 # Fit it!
-stan_psm <- stan(file = here("analysis","cohoPSM_SEM.stan"),
+stan_psm <- stan(file = here("analysis","stan","cohoPSM_SEM.stan"),
                  data = stan_dat, 
                  init = lapply(1:3, function(i) stan_init(stan_dat)),
                  pars = c("a0","A","Z","phi","g_mu_X",
@@ -189,7 +160,7 @@ for(i in 1:length(stan_psm_list))
   cat("|", rep("*",i), rep(" ", length(stan_psm_list) - i), "| Working on model ", i, "/", 
       length(stan_psm_list), " (see Viewer for progress) \n\n", sep = "")
   
-  fit <- stan(file = here("analysis","cohoPSM_SEM.stan"),
+  fit <- stan(file = here("analysis","stan","cohoPSM_SEM.stan"),
               data = stan_dat,
               init = lapply(1:3, function(i) stan_init(stan_dat)),
               pars = with(stan_dat, {
@@ -243,46 +214,6 @@ save(stan_psm_list, stan_psm_mods, file = here("analysis","results","stan_psm_WA
 
 
 #---------------------------------------------------------------------
-# Function to generate initial values for SEM for cross-validation,
-# using previously fitted full model 
-#---------------------------------------------------------------------
-
-stan_init_cv <- function(fit)
-{
-  samples <- extract(fit)
-  M <- nrow(samples$a0)
-  i <- sample(M,1)
-  
-  AA <- matrix(samples$A[i,,], nrow = dim(samples$A)[2], ncol = dim(samples$A)[3], byrow = TRUE)
-  AA <- AA[lower.tri(AA, diag = TRUE)]
-  logit_p_psm_hat <- stan_mean(fit,"logit_p_psm_hat")
-  logit_p_psm <- qlogis(samples$p_psm[i,])
-
-  with(samples, 
-       list(a0 = a0[i,],
-            A_nid_vec = array(AA, dim = length(AA)),
-            Z_nid = matrix(Z[i,,], nrow = dim(Z)[2], ncol = dim(Z)[3], byrow = TRUE),
-            phi = phi[i,],
-            mu_b0 = mu_b0[i],
-            b0_Z_nid = array(b0_Z[i,], dim = ncol(b0_Z)),
-            sigma_b0 = sigma_b0[i],
-            b0_std = array((b0[i,] - mu_b0[i]) / sigma_b0[i], dim = ncol(b0)),
-            mu_b_su = mu_b_su[i],
-            b_su_Z_nid = array(b_su_Z[i,], dim = ncol(b_su_Z)),
-            sigma_b_su = sigma_b_su[i],
-            b_su_std = array((b_su[i,] - mu_b_su[i]) / sigma_b_su[i], dim = ncol(b_su)),
-            mu_b_fa = mu_b_fa[i],
-            b_fa_Z = array(b_fa_Z[i,], dim = ncol(b_fa_Z)),
-            sigma_b_fa = sigma_b_fa[i],
-            b_fa_std = array((b_fa[i,] - mu_b_fa[i]) / sigma_b_fa[i], dim = ncol(b_fa)),
-            sigma_psm = sigma_psm[i],
-            logit_p_psm_std = array((logit_p_psm - logit_p_psm_hat) / sigma_psm[i], dim = length(logit_p_psm))))
-}
-
-save(stan_init_cv, file = here("analysis","stan_init_cv.RData"))
-
-
-#---------------------------------------------------------------------
 # K-fold cross-validation over YEARS:
 # Leave out one year of PSM data at a time,
 # fit candidate models to training data and evaluate log posterior
@@ -319,7 +250,7 @@ for(i in 1:length(stan_psm_cv_year_list))
     cat("Working on model ", i, "/", length(stan_psm_cv_year_list), " and hold-out year ", 
         grep(j, sort(unique(psm$year))), "/", length(unique(psm$year)), 
         " (see Viewer for progress) \n\n", sep = "")
-    fit <- stan(file = here("analysis","cohoPSM_SEM.stan"),
+    fit <- stan(file = here("analysis","stan","cohoPSM_SEM.stan"),
                 data = stan_dat_cv_year, 
                 init = lapply(1:3,function(i) stan_init_cv(stan_psm)),
                 pars = with(stan_dat_cv_year, {
@@ -378,38 +309,7 @@ save(stan_psm_cv_year_list, stan_psm_cv_year_mods, file = here("analysis","resul
 # roughly similar in size (i.e., number of observations).
 #---------------------------------------------------------------------
 
-# Randomly partition sites into groups
-KfoldCV_partition <- function(psm_dat, K, N_random = 1000)
-{
-  grps <- matrix(NA, length(levels(psm$site)), N_random)
-  pos <- 1:nrow(grps)
-  target <- nrow(psm)/K
-  for(j in 1:ncol(grps))
-  {
-    pos_permuted <- sample(nrow(grps), nrow(grps), replace = FALSE)
-    N_site <- table(psm$site)[pos_permuted]
-    grp_permuted <- c(1, rep(0, nrow(grps) - 1))
-    for(i in 2:nrow(grps))
-    {
-      if(abs(sum(N_site[grp_permuted==grp_permuted[i-1]]) + N_site[i] - target) <
-         abs(sum(N_site[grp_permuted==grp_permuted[i-1]]) - target))
-      {
-        grp_permuted[i] <- grp_permuted[i-1]
-      } else {
-        if(grp_permuted[i] < 10) grp_permuted[i] <- grp_permuted[i-1] + 1
-      }
-    }
-    grps[,j] <- grp_permuted[order(pos_permuted)]
-  }
-  N_site <- table(psm$site)
-  range_N_grp <- apply(grps, 2, function(grp) diff(range(tapply(N_site, grp, sum))))
-  grp <- grps[,which.min(range_N_grp)]
-  return(list(N_group = tapply(N_site, grp, sum), group = grp[match(psm$site, levels(psm$site))]))
-}
-
-save(KfoldCV_partition, file = here("analysis","KfoldCV_partition.RData"))
-
-partitions <- KfoldCV_partition(psm_dat = psm, K = 10)
+partitions <- kfold_partition(psm_dat = psm, K = 10)
 partitions  # check that the procedure found a "good" partition (roughly equal group sizes)
 site_group <- partitions$group
 
@@ -445,7 +345,7 @@ for(i in 1:length(stan_psm_cv_site_list))
     cat("Working on model ", i, "/", length(stan_psm_cv_site_list), " and hold-out group ", 
         grep(j, sort(unique(site_group))), "/", length(unique(site_group)), 
         " (see Viewer for progress) \n\n", sep = "")
-    fit <- stan(file = here("analysis","cohoPSM_SEM.stan"),
+    fit <- stan(file = here("analysis","stan","cohoPSM_SEM.stan"),
                 data = stan_dat_cv_site, 
                 init = lapply(1:3,function(i) stan_init_cv(stan_psm)),
                 pars = with(stan_dat_cv_site, {
@@ -570,7 +470,7 @@ stan_dat_all <- list(S = nrow(X_all),
 
 ## @knitr stan_psm_all_r2r
 # Fit it!
-stan_psm_all <- stan(file = here("analysis","cohoPSM_SEM.stan"),
+stan_psm_all <- stan(file = here("analysis","stan","cohoPSM_SEM.stan"),
                      data = stan_dat_all, 
                      init = lapply(1:3, function(i) stan_init(stan_dat_all)),
                      pars = c("a0","A","Z","phi",
