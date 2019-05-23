@@ -1,7 +1,7 @@
 data {
   int<lower=1> S;                // number of sites
-  int<lower=1> D_normal;         // dimension of normally distributed site-level covariates
-  int<lower=1> D_gamma;          // dimension of gamma-distributed site-level covariates
+  int<lower=0> D_normal;         // dimension of normally distributed site-level covariates
+  int<lower=0> D_gamma;          // dimension of gamma-distributed site-level covariates
   matrix[S,D_normal+D_gamma] X;  // site-level covariates: 1, ..., D_normal, ..., D_normal+D_gamma
   int<lower=1> L;                // dimension of latent factor space (user-specified!)
   int<lower=1> N;                // number of PSM observations
@@ -28,8 +28,14 @@ transformed data {
   int<lower=0,upper=N> N_lpd;         // number of observations used to evaluate lpd
   
   D = D_normal + D_gamma;
-  X_normal = block(X, 1, 1, S, D_normal);
-  X_gamma = block(X, 1, D_normal + 1, S, D_gamma);
+  if(D_normal == 0)
+    X_normal = rep_matrix(0,S,D_normal);
+  else
+    X_normal = X[,1:D_normal];
+  if(D_gamma == 0)
+    X_gamma = rep_matrix(0,S,D_gamma);
+  else
+    X_gamma = X[,(D_normal + 1):D];
 
   // Extract PSM data that will be used to fit the model
   for(i in 1:N)
@@ -126,14 +132,41 @@ model {
   b_fa_std ~ normal(0,1); // b_fa ~ normal(mu_b_fa + Z_nid*b_fa_Z_nid, sigma_b_fa)
   
   // Factor analysis likelihood of site-level covariates
-  to_vector(X_normal) ~ normal(to_vector(block(g_mu_X, 1, 1, S, D_normal)), 
-                               to_vector(rep_matrix(head(phi, D_normal), S)));
+  // normally distributed
   {
-    matrix[S,D_gamma] phi_gamma;
-    matrix[S,D_gamma] inv_mu_X_gamma;
+    matrix[S,D_normal] g_mu_X_normal;
+    matrix[S,D_normal] phi_normal;
     
-    phi_gamma = rep_matrix(tail(phi, D_gamma), S);
-    inv_mu_X_gamma = exp(-block(g_mu_X, 1, D_normal + 1, S, D_gamma));
+    if(D_normal == 0)
+    {
+      g_mu_X_normal = rep_matrix(0,S,D_normal);
+      phi_normal = rep_matrix(0,S,D_normal);
+    }
+    else
+    {
+      g_mu_X_normal = g_mu_X[,1:D_normal];
+      phi_normal = rep_matrix(head(phi, D_normal), S);
+    }
+    
+    to_vector(X_normal) ~ normal(to_vector(g_mu_X_normal), to_vector(phi_normal));
+  }
+  
+  // gamma-distributed
+  {
+    matrix[S,D_gamma] inv_mu_X_gamma;
+    matrix[S,D_gamma] phi_gamma;
+    
+    if(D_gamma == 0)
+    {
+      inv_mu_X_gamma = rep_matrix(0,S,D_gamma);
+      phi_gamma = rep_matrix(0,S,D_gamma);
+    }
+    else
+    {
+      inv_mu_X_gamma = exp(-g_mu_X[,(D_normal + 1):D]);
+      phi_gamma = rep_matrix(tail(phi, D_gamma), S);
+    }
+    
     to_vector(X_gamma) ~ gamma(to_vector(phi_gamma), to_vector(phi_gamma .* inv_mu_X_gamma));
   }
 
