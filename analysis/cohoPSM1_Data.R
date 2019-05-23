@@ -56,7 +56,7 @@ psm <- merge(psm, lulc_roads_data, by = "site")
 psm <- data.frame(psm[,c("site","watershed","year","n","n_psm","ppt_su","ppt_fa","area")], psm[,-(1:9)])
 psm <- psm[order(psm$site,psm$year),]
 
-## @ knitr unused
+## @ knitr ignore
 #----------------------------------------------
 # ADDITIONAL SITES FOR PSM PREDICTIONS
 #----------------------------------------------
@@ -92,4 +92,142 @@ psm_all$data <- "pre"
 psm_all <- psm_all[,c("data", names(psm))]
 psm_all <- rbind(data.frame(data = "psm", psm), psm_all)
 psm_all <- data.frame(ID = 1:nrow(psm_all), psm_all)
+
+## @ knitr ignore
+#------------------------------------------------------
+# Assemble data for sites with PSM observations
+# in Stan-friendly format
+#------------------------------------------------------
+## @knitr stan_data_psm_sites
+
+# site-level covariates
+
+# composition data (multiple categories):
+# bound away from 0 and 1 and re-standardize to sum to 1,
+# then transform to log ratios
+X1 <- as.matrix(lulc_roads_data[,c("ccap_hdev","ccap_ldev","ccap_mdev",
+                                   "ccap_decid","ccap_evgrn","ccap_mxforest",
+                                   "ccap_open","ccap_wetland","ccap_ag", "ccap_other")])
+X1[X1==0] <- 1e-4
+X1[X1==1] <- 1 - 1e-4
+X1 <- sweep(X1, 1, rowSums(X1), "/")
+X1 <- sweep(log(X1[,-ncol(X1)]), 1, log(X1[,ncol(X1)]), "-") 
+X1 <- sweep(sweep(X1, 2, colMeans(X1), "-"), 2, apply(X1, 2, sd), "/")
+
+# proportion data:
+# bound away from 0 and 1 and logit-transform
+X2 <- as.matrix(lulc_roads_data[,"nlcd_imperv",drop=F])
+X2[X2==0] <- 1e-4
+X2[X2==1] <- 1 - 1e-4
+X2 <- qlogis(X2)
+X2 <- sweep(sweep(X2, 2, colMeans(X2), "-"), 2, apply(X2, 2, sd), "/")
+
+# nonnegative continuous data:
+# scale to SD = 1, bound away from 0
+X3 <- as.matrix(lulc_roads_data[,c("roads1","roads2","roads3","roads4","roads5","traffic",
+                                   "restoration","pop_census","pop_lscan")])
+X3 <- sweep(X3, 2, apply(X3, 2, sd), "/")
+X3[X3==0] <- 1e-4
+X3 <- sweep(X3, 2, apply(X3, 2, sd), "/")
+
+# reassemble all variables into matrix
+X <- cbind(X2,X1,X3)
+rm(list = c("X1","X2","X3"))
+
+# indices of covariates assumed to be normally (gamma) distributed
+normal_indx <- grep("ccap|nlcd", colnames(X))
+gamma_indx <- which(!grepl("ccap|nlcd", colnames(X)))
+
+# Data for Stan
+stan_dat <- list(S = nrow(X), 
+                 D_normal = length(normal_indx), D_gamma = length(gamma_indx),
+                 X = X, 
+                 L = 1,  # user-specified!
+                 N = nrow(psm), 
+                 site = as.numeric(psm$site),
+                 ppt_su = array(as.vector(scale(psm$ppt_su/10, scale = FALSE)), dim = nrow(psm)),
+                 ppt_fa = array(as.vector(scale(psm$ppt_fa/10, scale = FALSE)), dim = nrow(psm)),
+                 I0_Z = 1,
+                 I_su = 1,
+                 I_su_Z = 1,
+                 I_fa = 1,
+                 I_fa_Z = 1,
+                 n = psm$n,
+                 n_psm = psm$n_psm,
+                 I_fit = rep(1, nrow(psm)),
+                 I_lpd = rep(1, nrow(psm)))
+
+## @knitr ignore
+#------------------------------------------------------
+# Assemble data for all sites, including out-of sample
+# subbasins (no PSM observations) to be predicted,
+# in Stan-friendly format
+#------------------------------------------------------
+## @knitr stan_data_all_sites
+
+# site-level covariates
+
+# composition data (multiple categories):
+# bound away from 0 and 1 and re-standardize to sum to 1,
+# then transform to log ratios
+X1_all <- as.matrix(lulc_roads_data_all[,c("ccap_hdev","ccap_ldev","ccap_mdev",
+                                           "ccap_decid","ccap_evgrn","ccap_mxforest",
+                                           "ccap_open","ccap_wetland","ccap_ag", "ccap_other")])
+X1_all[X1_all==0] <- 1e-4
+X1_all[X1_all==1] <- 1 - 1e-4
+X1_all <- sweep(X1_all, 1, rowSums(X1_all), "/")
+X1_all <- sweep(log(X1_all[,-ncol(X1_all)]), 1, log(X1_all[,ncol(X1_all)]), "-") 
+X1_all <- sweep(sweep(X1_all, 2, colMeans(X1_all), "-"), 2, apply(X1_all, 2, sd), "/")
+
+# proportion data:
+# bound away from 0 and 1 and logit-transform
+X2_all <- as.matrix(lulc_roads_data_all[,"nlcd_imperv",drop=F])
+X2_all[X2_all==0] <- 1e-4
+X2_all[X2_all==1] <- 1 - 1e-4
+X2_all <- qlogis(X2_all)
+X2_all <- sweep(sweep(X2_all, 2, colMeans(X2_all), "-"), 2, apply(X2_all, 2, sd), "/")
+
+# nonnegative continuous data:
+# scale to SD = 1, bound away from 0
+X3_all <- as.matrix(lulc_roads_data_all[,c("roads1","roads2","roads3","roads4","roads5",
+                                           "traffic", "restoration","pop_census","pop_lscan")])
+X3_all <- sweep(X3_all, 2, apply(X3_all, 2, sd), "/")
+X3_all[X3_all==0] <- 1e-4
+X3_all <- sweep(X3_all, 2, apply(X3_all, 2, sd), "/")
+
+# reassemble all variables into matrix
+X_all <- cbind(X2_all, X1_all, X3_all)
+rm(list = c("X1_all","X2_all","X3_all"))
+
+# indices of covariates assumed to be normally (gamma) distributed
+normal_indx <- grep("ccap|nlcd", colnames(X_all))
+gamma_indx <- which(!grepl("ccap|nlcd", colnames(X_all)))
+
+# Data for Stan
+stan_dat_all <- list(S = nrow(X_all), 
+                     D_normal = length(normal_indx), D_gamma = length(gamma_indx),
+                     # X = t(X_all), 
+                     X = X_all, 
+                     L = 1,  # user-specified!
+                     N = nrow(psm_all), 
+                     site = as.numeric(psm_all$site),
+                     ppt_su = array(as.vector(scale(psm_all$ppt_su/10, scale = FALSE)), dim = nrow(psm_all)),
+                     ppt_fa = array(as.vector(scale(psm_all$ppt_fa/10, scale = FALSE)), dim = nrow(psm_all)),
+                     I0_Z = 1,
+                     I_su = 1,
+                     I_su_Z = 1,
+                     I_fa = 1,
+                     I_fa_Z = 1,
+                     n = psm_all$n,
+                     n_psm = psm_all$n_psm,
+                     I_fit = as.numeric(psm_all$data=="psm"),
+                     I_lpd = rep(0, nrow(psm_all)))
+## @knitr ignore
+
+
+
+
+
+
+
 
