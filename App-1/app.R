@@ -1,16 +1,17 @@
 ## libraries
+library(here)
 library(dplyr)
 library(shiny)
 library(RColorBrewer)
 ## Read in the data/model estimates and join
-psm_pre<-read.table("../analysis/results/PSM_predictions.txt",header=TRUE)
-spawn<-read.csv("../data/spawner_data.csv", header=TRUE)
-spatial<-read.csv("../data/spatial_data.csv", header=TRUE)
+psm_pre<-read.table(here("analysis","results","PSM_predictions.txt"), header=TRUE)
+spawn<-read.csv(here("data","spawner_data.csv"), header=TRUE)
+spatial<-read.csv(here("data","spatial_data.csv"), header=TRUE)
 
-spawnmn<-aggregate(spawn$n,list(spawn$site),mean)
-colnames(spawnmn)<-c("site", "spawn.n")
-spatial$site<-as.factor(spatial$site)
-allsites=FALSE
+spawnmn <- aggregate(spawn$n,list(spawn$site),mean)
+colnames(spawnmn) <- c("site", "spawn.n")
+spatial$site <- as.factor(spatial$site)
+allsites <- FALSE
 
 allsites==FALSE
 #eventually, use spatial_data_predict.csv instead of spatial_data.csv

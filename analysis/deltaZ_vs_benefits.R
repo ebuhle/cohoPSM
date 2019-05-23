@@ -16,30 +16,29 @@ rm(list=ls())
 options(stringsAsFactors = FALSE)
 
 ## libraries
+library(here)
 library(dplyr)
 library(RColorBrewer)
 library(colorRamps)
-## Set working directory. Add in your own path in an if statement for your file structure
-if(length(grep("ailene", getwd())>0)) { setwd("~/Documents/GitHub/cohoPSM")}
 
 ## Step 1:  Read in the data/model estimates
-psm_pre<-read.table("analysis/results/PSM_predictions.txt",header=TRUE)
-spawn<-read.csv("data/spawner_data.csv", header=TRUE)
-spatial<-read.csv("data/spatial_data.csv", header=TRUE)
+psm_pre <- read.table(here("analysis","results","PSM_predictions.txt"), header=TRUE)
+spawn <- read.csv(here("data","spawner_data.csv"), header=TRUE)
+spatial <- read.csv(here("data","spatial_data.csv"), header=TRUE)
 
 ## Step 2: Choices: select the threshold psm and you want to use, and select all sites or only sites for which we have PSM data (rather than predicted PSM)
-input<-as.data.frame(NA)
-input$psm_thresh<-0.25
-allsites=FALSE #if false, selects out only sites with PSM calculated from field data, rather than sites with predicted PSM too
+input <- as.data.frame(NA)
+input$psm_thresh <- 0.25
+allsites <- FALSE #if false, selects out only sites with PSM calculated from field data, rather than sites with predicted PSM too
 
 ## Step 3: combine all the data and prep for plotting calculate mean spawner abundance by site, across years
 ## combined data file with things we want to plot is called "d"
-source ("analysis/source/prepforplots.R")
+source(here("analysis","source","prepforplots.R"))
 dim(d)
 ## Step 4. Plot Change in Z on x-axis and benefits of interest on the y axis
 
 #quartz(height=8,width=16)
-pdf("analysis/results/testdeltaZvsbenefitsfig.pdf", width = 16, height = 8)
+pdf(here("analysis","results","testdeltaZvsbenefitsfig.pdf"), width = 16, height = 8)
 
 par(mfrow=c(1,3))
 #plot relationship of PSM and Z
@@ -129,7 +128,7 @@ text(rxy$deltaZ, rxy$benefit, labels=as.numeric(as.factor(rxy$site)),cex=0.8, fo
 peoplescore<-as.data.frame(cbind(rxy$site,rxy$rest.score))
 colnames(peoplescore)<-c("site","restscore.people")
 rest.scores<-full_join(spawnscore,peoplescore)
-write.csv(rest.scores,"analysis/output/restscores.csv", row.names=FALSE)
+write.csv(rest.scores,here("analysis","output","restscores.csv"), row.names=FALSE)
 #conservation sites= those with below threshold psm
 quartz(height=5,width=10)
 par(mfrow=c(1,2))
@@ -178,7 +177,7 @@ badsites<-psm_pre[psm_pre$Z_mean>psm_thresh,]
 sitenames<-unique(psm_pre$site)[1:51]
 badsites<-badsites[1:24,]#just the sites with names
 
-abund<-read.csv("data/WDFW-Salmonid_Stock_Inventory_Populations.csv", header=TRUE)
+abund<-read.csv(here("data","WDFW-Salmonid_Stock_Inventory_Populations.csv"), header=TRUE)
 sort(unique(abund$Population.Name))
 dim(badsites)
 tail(badsites)
