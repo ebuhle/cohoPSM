@@ -9,16 +9,23 @@
 # newsites  A numeric vector of length `N_new` giving the site numbers (coded as in `data`) for which
 #           predictions are to be made.
 # newZ  A matrix of dimension N_new x K giving the K factor scores for each new prediction.
+# transform  Logical indicating whether to return the linear predictor (FALSE, the default) or
+#            inverse-logit transform it.
 #
 ## Value
-# An `iter` x `N_new` matrix containing posterior samples of  the predicted probability 
-# (or logit probability, if `transform = FALSE`) of PSM for each 
+# An `iter` x `N_new` matrix containing posterior samples of the predicted probability 
+# (or the linear predictor of logit probability, if `transform = FALSE`) of PSM for each 
 # 
 
-sem_psm_predict <- function(fit, data, newsites, newZ) 
+sem_psm_predict <- function(fit, data, newsites, newZ, transform = FALSE) 
 {
   samples <- extract(fit)
+
+  with(c(data, samples), {
+    logit_p_psm_hat <- b0 + I0_Z*b0_Z  %*% t(newZ) + 
+      I_su*b_su + I_su_Z*b_su_Z %*% t(newZ) + I_fa_Z*b_fa_Z %*% t(newZ)
+  })
   
-  
+  return(switch(transform, "FALSE" = logit_p_psm_hat, "TRUE" = plogis(logit_p_psm_hat)))
 }
 
