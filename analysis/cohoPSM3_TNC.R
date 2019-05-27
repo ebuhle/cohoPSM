@@ -5,6 +5,7 @@
 options(device = ifelse(.Platform$OS.type == "windows", "windows", "quartz"))
 options(mc.cores = parallel::detectCores(logical = FALSE) - 1)
 library(yarrr)
+library(vioplot)
 library(rstan)
 library(loo)
 library(shinystan)
@@ -20,6 +21,7 @@ source(here("analysis","functions","extract1.R"))
 source(here("analysis","functions","stan_init.R"))
 source(here("analysis","functions","stan_init_cv.R"))
 source(here("analysis","functions","kfold_partition.R"))
+source(here("analysis","functions","vioplot2.R"))
 
 # read and wrangle data
 source(here("analysis","cohoPSM1_data.R"))  
@@ -324,7 +326,7 @@ for(j in sort(unique(site_group)))
 {
   cat("Working on hold-out group ", grep(j, sort(unique(site_group))), "/", 
       length(unique(site_group)), " (see Viewer for progress) \n\n", sep = "")
-
+  
   # Modify data to be passed to SEMs
   stan_dat_cv_site <- stan_dat
   stan_dat_cv_site$I_fit <- as.numeric(site_group != j)  # training data
@@ -339,16 +341,16 @@ for(j in sort(unique(site_group)))
               data = stan_dat_cv_site, 
               init = lapply(1:3,function(i) stan_init_cv(stan_psm)),
               pars = c("a0","A","Z","phi","mu_b0","b0_Z","sigma_b0","b0",
-                  "mu_b_su","b_su_Z","sigma_b_su","b_su",
-                  "mu_b_fa","b_fa_Z","sigma_b_fa","b_fa",
-                  "sigma_psm","p_psm","ll_psm"),
+                       "mu_b_su","b_su_Z","sigma_b_su","b_su",
+                       "mu_b_fa","b_fa_Z","sigma_b_fa","b_fa",
+                       "sigma_psm","p_psm","ll_psm"),
               chains = 3, iter = 12000, warmup = 2000, thin = 5,
               control = list(stepsize = 0.05))
   
   # Store fitted object and log-likelihood matrix
   stan_psm_cv_site_list$SEM_full$fit[[as.character(j)]] <- fit
   stan_psm_cv_site_list$SEM_full$ll_psm[,site_group == j] <- as.matrix(fit,"ll_psm")
-
+  
   ## Roads + traffic SEM
   # Fit
   fit <- stan(file = here("analysis","stan","cohoPSM_SEM.stan"),
@@ -423,15 +425,14 @@ psm_crit <- 0.3   # PSM threshold
 alpha <- 0.9  # credibility level
 prediction_level <- "site"  # "site" or "year"-within-site
 show_site <- "Big Scandia Creek"
-show_site_num <- grep(show_site, levels(psm$site))
-c1 <- "gray"  # posterior predictive PSM curves, all sites
-c1t <- transparent(c1, 0.7)
-c2 <- "salmon"  # highlighted site
-c2t <- transparent(c2, 0.7)
+show_num <- grep(show_site, levels(psm$site))
+c1 <- "darkgray"  # posterior predictive PSM curves, all sites
+c2 <- "gray"  # highlighted site
+c2t <- transparent(c2, 0.5)
 
-Z <- stan_mean(stan_psm, "Z")
-PSM <- colMeans2(sem_psm_predict(stan_psm, data = stan_dat, newsites = 1:stan_dat$S, 
-                       level = prediction_level, transform = TRUE))  # use estimated Z
+Z <- colMedians(extract1(stan_psm, "Z")[,,1])
+PSM <- colMedians(sem_psm_predict(stan_psm, data = stan_dat, newsites = 1:stan_dat$S, 
+                                  level = prediction_level, transform = TRUE))  # use estimated Z
 z_out <- sem_z_crit(stan_psm, data = stan_dat, psm_crit = psm_crit, 
                     level = prediction_level, alpha = alpha)
 newsites <- rep(1:stan_dat$S, each = 50)
@@ -440,6 +441,8 @@ newZ <- matrix(rep(seq(min(Z, z_out$z_crit) - 0.1,
                        length = 50), stan_dat$S), ncol = 1)
 psm_pred <- sem_psm_predict(stan_psm, data = stan_dat, newsites = newsites, newZ = newZ,
                             level = prediction_level, transform = TRUE)
+psm_pred_show_site <- sem_psm_predict(stan_psm, data = stan_dat, newsites = show_num,
+                                      newZ = z_out$z_crit[show_num], transform = TRUE)
 
 
 dev.new()
@@ -451,15 +454,18 @@ plot(Z, PSM, pch = "", xlim = range(newZ), ylim = c(0,1), xaxs = "i",
      las = 1, cex.axis = 1.2, cex.lab = 1.5)
 
 for(j in 1:stan_dat$S)
-  lines(newZ[newsites==j], colMeans2(psm_pred[,newsites==j]), col = c1)
+  lines(newZ[newsites==j], colMedians(psm_pred[,newsites==j]), col = c1)
 
-lines(newZ[newsites==show_site_num], colMeans2(psm_pred[,newsites==show_site_num]), col = c2, lwd = 3)
-polygon(c(newZ[newsites==show_site_num], rev(newZ[newsites==show_site_num])),
-        c(colQuantiles(psm_pred[,newsites==show_site_num], probs = 0.05),
-          rev(colQuantiles(psm_pred[,newsites==show_site_num], probs = 0.95))),
+lines(newZ[newsites==show_num], colMedians(psm_pred[,newsites==show_num]), lwd = 4)
+polygon(c(newZ[newsites==show_num], rev(newZ[newsites==show_num])),
+        c(colQuantiles(psm_pred[,newsites==show_num], probs = 0.05),
+          rev(colQuantiles(psm_pred[,newsites==show_num], probs = 0.95))),
         col = c2t, border = NA)
+vioplot2(psm_pred_show_site, at = z_out$z_crit[show_num], add = TRUE,
+         col = NULL, border = "black", wex = 0.15, drawRect = FALSE, pchMed = "")
+points(Z, PSM, pch = 16, cex = 1.5, col = ifelse(1:stan_dat$S == show_num, "black", c1))
+abline(v = z_out$z_crit[show_num], col = "red")
 
-points(Z, PSM, pch = 16, cex = 1.5, col = ifelse(1:stan_dat$S == show_site_num, c2, "black"))
 abline(h = psm_crit, col = "red", lwd = 2)
 rug(z_out$z_crit, col = "red")
 
