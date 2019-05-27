@@ -446,7 +446,7 @@ psm_pred_show_site <- sem_psm_predict(stan_psm, data = stan_dat, newsites = show
 
 
 dev.new()
-# png(filename=here("results","figures","psm_z_threshold.png"),
+# png(filename=here("analysis","results","figures","psm_z_threshold.png"),
 #     width=7*0.75, height=15*0.75, units="in", res=300, type="cairo-png")
 
 plot(Z, PSM, pch = "", xlim = range(newZ), ylim = c(0,1), xaxs = "i",
