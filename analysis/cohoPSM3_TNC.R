@@ -426,7 +426,7 @@ show_site <- "Big Scandia Creek"
 show_site_num <- grep(show_site, levels(psm$site))
 c1 <- "gray"  # posterior predictive PSM curves, all sites
 c1t <- transparent(c1, 0.7)
-c2 <- "lightblue"  # highlighted site
+c2 <- "salmon"  # highlighted site
 c2t <- transparent(c2, 0.7)
 
 Z <- stan_mean(stan_psm, "Z")
@@ -443,6 +443,8 @@ psm_pred <- sem_psm_predict(stan_psm, data = stan_dat, newsites = newsites, newZ
 
 
 dev.new()
+# png(filename=here("results","figures","psm_z_threshold.png"),
+#     width=7*0.75, height=15*0.75, units="in", res=300, type="cairo-png")
 
 plot(Z, PSM, pch = "", xlim = range(newZ), ylim = c(0,1), xaxs = "i",
      xlab = bquote("Urbanization (" * italic(Z) * ")"), ylab = "Predicted PSM",
@@ -461,6 +463,7 @@ points(Z, PSM, pch = 16, cex = 1.5, col = ifelse(1:stan_dat$S == show_site_num, 
 abline(h = psm_crit, col = "red", lwd = 2)
 rug(z_out$z_crit, col = "red")
 
+# dev.off()
 
 
 
