@@ -1,7 +1,7 @@
-#' Posterior Predictive Distribution of PSM Risk Given Factor Scores
+#' Posterior Predictive Distribution of PSM Risk
 #' 
 #' Compute the posterior predictive distribution of PSM risk from a fitted SEM, 
-#' conditioned on input values of the latent factor(s). 
+#' possibly conditioned on specified values of the latent factor(s). 
 #' 
 #' Currently predictions can only be made for sites (with or without PSM data)
 #' used to fit the model, and for sample-average precipitation conditions (i.e., precip effects
@@ -14,7 +14,8 @@
 #' @param newsites Numeric vector of length \code{N_new} giving the site numbers 
 #' (coded as in \code{data}) for which predictions are to be made.
 #' @param newZ Matrix of dimension \code{N_new x K} giving the \emph{K} factor scores
-#' for each new prediction.
+#' for each new prediction. If \code{NULL}, the posterior samples of site-specific factor
+#' scores are used.
 #' @param level Level of grouping at which to predict. Options are \code{"site"}
 #' (site-specific interannual average, the default) or \code{"year"} 
 #' (include year-within-site residual variation).
@@ -26,21 +27,29 @@
 #' 
 #' @export
 
-sem_psm_predict <- function(fit, data, newsites, newZ, level = "site", transform = FALSE) 
+sem_psm_predict <- function(fit, data, newsites, newZ = NULL, level = "site", transform = FALSE) 
 {
   samples <- extract(fit)
   
   logit_p_psm <- with(c(data, samples), {
-    logit_p_psm_hat <- b0 + I0_Z*b0_Z  %*% t(newZ)  # add precip terms
+    
+    if(is.null(newZ)) {
+      logit_p_psm_hat <- b0[,newsites] + 
+        I0_Z*apply(sweep(Z[,newsites,,drop = FALSE], c(1,3), b0_Z, "*"), c(1,2), sum) # add precip terms #
+    } else {
+      logit_p_psm_hat <- b0[,newsites] + I0_Z*b0_Z  %*% t(newZ)  # add precip terms #
+    }
+    
     if(level == "site")
       logit_p_psm <- logit_p_psm_hat
     if(level == "year") {
       delta <- array(rnorm(prod(dim(logit_p_psm_hat)), 0, sigma_psm), dim(logit_p_psm_hat))
       logit_p_psm <- logit_p_psm_hat + delta
     }
+    
     logit_p_psm
   })
-
+  
   return(if(transform) plogis(logit_p_psm) else logit_p_psm)
 }
 

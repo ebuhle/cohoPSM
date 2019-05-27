@@ -268,7 +268,7 @@ print(stan_psm_rt, prob = c(0.025, 0.5, 0.975),
 save(stan_psm_rt, file = here("analysis","results","stan_psm_rt.RData"))
 
 #==================================================================
-# Model Selection
+# MODEL SELECTION
 #==================================================================
 
 #------------------------------------------------------------------
@@ -405,10 +405,61 @@ stan_psm_cv_site_mods
 save(stan_psm_cv_site_list, stan_psm_cv_site_mods, file = here("analysis","results","stan_psm_tnc_cv_site.RData"))
 
 
+#==================================================================
+# FIGURES
+#==================================================================
+
+#----------------------------------------------------------------------
+# PSM Threshold vs. Critical Urbanization Decision Analysis
+#
+# Plot site-specific posterior predictive distributions of PSM risk 
+# as a function of Z, with posterior medians of current conditions.
+# Show psm_crit and corresponding site-specific z_crit values for a
+# specified confidence level alpha.
+# Highlight a selected site and show detail
+#----------------------------------------------------------------------
+
+psm_crit <- 0.3   # PSM threshold
+alpha <- 0.9  # credibility level
+prediction_level <- "site"  # "site" or "year"-within-site
+show_site <- "Big Scandia Creek"
+show_site_num <- grep(show_site, levels(psm$site))
+c1 <- "gray"  # posterior predictive PSM curves, all sites
+c1t <- transparent(c1, 0.7)
+c2 <- "lightblue"  # highlighted site
+c2t <- transparent(c2, 0.7)
+
+Z <- stan_mean(stan_psm, "Z")
+PSM <- colMeans2(sem_psm_predict(stan_psm, data = stan_dat, newsites = 1:stan_dat$S, 
+                       level = prediction_level, transform = TRUE))  # use estimated Z
+z_out <- sem_z_crit(stan_psm, data = stan_dat, psm_crit = psm_crit, 
+                    level = prediction_level, alpha = alpha)
+newsites <- rep(1:stan_dat$S, each = 50)
+newZ <- matrix(rep(seq(min(Z, z_out$z_crit) - 0.1, 
+                       max(Z, z_out$z_crit) + 0.1, 
+                       length = 50), stan_dat$S), ncol = 1)
+psm_pred <- sem_psm_predict(stan_psm, data = stan_dat, newsites = newsites, newZ = newZ,
+                            level = prediction_level, transform = TRUE)
 
 
+dev.new()
 
+plot(Z, PSM, pch = "", xlim = range(newZ), ylim = c(0,1), xaxs = "i",
+     xlab = bquote("Urbanization (" * italic(Z) * ")"), ylab = "Predicted PSM",
+     las = 1, cex.axis = 1.2, cex.lab = 1.5)
 
+for(j in 1:stan_dat$S)
+  lines(newZ[newsites==j], colMeans2(psm_pred[,newsites==j]), col = c1)
+
+lines(newZ[newsites==show_site_num], colMeans2(psm_pred[,newsites==show_site_num]), col = c2, lwd = 3)
+polygon(c(newZ[newsites==show_site_num], rev(newZ[newsites==show_site_num])),
+        c(colQuantiles(psm_pred[,newsites==show_site_num], probs = 0.05),
+          rev(colQuantiles(psm_pred[,newsites==show_site_num], probs = 0.95))),
+        col = c2t, border = NA)
+
+points(Z, PSM, pch = 16, cex = 1.5, col = ifelse(1:stan_dat$S == show_site_num, c2, "black"))
+abline(h = psm_crit, col = "red", lwd = 2)
+rug(z_out$z_crit, col = "red")
 
 
 

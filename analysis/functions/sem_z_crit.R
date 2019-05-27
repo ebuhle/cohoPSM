@@ -50,13 +50,13 @@ sem_z_crit <- function(fit, data, psm_crit, level = "site", alpha)
     iter <- nrow(b0)
     S <- ncol(b0)
     
-    intercept <- b0  # add precip effects
+    intercept <- b0  # add precip effects #
     if(level == "year") {
       delta <- matrix(rnorm(iter*S, 0, sigma_psm), iter, S)
       intercept <- intercept + delta
     }
     
-    slope <- b0_Z  # add precip x Z interactions
+    slope <- b0_Z  # add precip x Z interactions #
     cdf <- ecdf(slope)
     F0 <- cdf(0)
     if(F0 >= 1 - alpha) 
