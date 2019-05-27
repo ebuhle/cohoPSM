@@ -385,7 +385,7 @@ write.table(psm_pre, here("analysis","results","PSM_predictions.txt"), sep="\t",
 #-----------------------------------------
 
 dev.new(width=10, height=10)
-# png(filename=here("results","loadings.png"), width=10, height=10, units = "in", res=300, type="cairo-png")
+# png(filename=here("results","figures","loadings.png"), width=10, height=10, units = "in", res=300, type="cairo-png")
 par(mfcol=c(2,1), mar=c(1,14,2.1,2.1), oma=c(3.5,0,0,0))
 
 gamma_labels <- lulc_roads_labels$plot_label[match(colnames(X)[gamma_indx], lulc_roads_labels$data.label)]
@@ -425,7 +425,7 @@ rm(A);rm(bxp_dat);rm(gamma_labels);rm(normal_labels)
 #---------------------------------------------------------
 
 dev.new(width=10, height=10)
-# png(filename=here("results","PSM_obs_vs_fit.png"), width=10, height=10, units="in", res=300, type="cairo-png")
+# png(filename=here("results","figures","PSM_obs_vs_fit.png"), width=10, height=10, units="in", res=300, type="cairo-png")
 par(mar=c(5.1,4.5,4.1,2.1))
 
 cc <- col2rgb("darkgray")
@@ -452,7 +452,7 @@ rm(cc);rm(lgd)
 #----------------------------------------------------------------------------------------------
 
 dev.new(width=7,height=15)
-# png(filename=here("results","psm_site_level_regressions.png"), width=7*0.75, height=15*0.75, units="in", res=300, type="cairo-png")
+# png(filename=here("results","figures","psm_site_level_regressions.png"), width=7*0.75, height=15*0.75, units="in", res=300, type="cairo-png")
 par(mfcol=c(3,1), mar=c(1.1,7,3,1.1), oma=c(4,0,0,0))
 
 mod <- stan_psm_list[["ZZZ"]]$fit
@@ -591,8 +591,9 @@ X_plot[,gamma_indx] <- log(X_plot[,gamma_indx])
 dimnames(X_plot)[[2]] <- lulc_roads_labels$plot_label[match(dimnames(X)[[2]], lulc_roads_labels$data_label)]
 R <- cor(X_plot)
 
+dev.new()
+# png(filename=here("results","figures","landscape_corrplot.png"), width=10*0.9, height=10*0.9, units="in", res=200, type="cairo-png")
 par(mar = c(1,1,1,1))
-# png(filename=here("results","landscape_corrplot.png"), width=10*0.9, height=10*0.9, units="in", res=200, type="cairo-png")
 corrplot(R, diag = F, method = "ellipse", order = "original", 
          col = c1, tl.col = "black", tl.cex = 1.2)
 # dev.off()
