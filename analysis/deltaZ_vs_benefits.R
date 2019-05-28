@@ -21,36 +21,42 @@ library(here)
 library(dplyr)
 library(RColorBrewer)
 library(colorRamps)
-
+#here is choosing the wrong path for me and the below set_here not working either..
+#set_here(path="/Users/aileneettinger/Documents/GitHub/cohoPSM")
 ## Step 1:  Read in the data/model estimates
 psm_pre <- read.table(here("analysis","results","PSM_predictions.txt"), header=TRUE)
 spawn <- read.csv(here("data","spawner_data.csv"), header=TRUE)
 spatial <- read.csv(here("data","spatial_data.csv"), header=TRUE)
-
+#here doesn't work for me!
+psm_pre<-read.table("../analysis/results/PSM_predictions.txt",header=TRUE)
+spawn<-read.csv("../data/spawner_data.csv", header=TRUE)
+spatial<-read.csv("../data/spatial_data.csv", header=TRUE)
 ## Step 2: Choices: select the threshold psm and you want to use, and select all sites or only sites for which we have PSM data (rather than predicted PSM)
-input <- as.data.frame(NA)
-input$psm_thresh <- 0.25
+#input <- as.data.frame(NA)
+#input$psm_thresh <- 0.25
 allsites <- FALSE #if false, selects out only sites with PSM calculated from field data, rather than sites with predicted PSM too
 
 ## Step 3: combine all the data and prep for plotting calculate mean spawner abundance by site, across years
 ## combined data file with things we want to plot is called "d"
 source(here("analysis","source","prepforplots.R"))
+#source ("../analysis/source/prepforplots.R")
+
 dim(d)
 ## Step 4. Plot Change in Z on x-axis and benefits of interest on the y axis
 
 #dev.new(height=8,width=16)
 pdf(here("analysis","results","testdeltaZvsbenefitsfig.pdf"), width = 16, height = 8)
-
+quartz()
 par(mfrow=c(1,3))
 #plot relationship of PSM and Z
 
-plot(d$p.psm.mean, d$Z.mean, pch=19,col=d$psmcol, cex.lab=1.2,cex.axis=1.2,cex=2, 
+plot(d$p_psm_mean, d$Z_mean, pch=19,col=d$psmcol, cex.lab=1.2,cex.axis=1.2,cex=2, 
      ylab="Urbanization score (Z)", xlab= "Mean Pred.PSM")
 abline(v=input$psm_thresh, lty=2, lwd=2)
-text(input$psm_thresh+.02,min(d$Z.mean),label="PSM threshold", cex=1.2)
+text(input$psm_thresh+.02,min(d$Z_mean),label="PSM threshold", cex=1.2)
 abline(h=Zcrit, lty=2, lwd=2, col="blue")
 #text(psm_pre3$p.psm.mean, psm_pre3$Z.mean, labels=as.numeric(as.factor(psm_pre3$site)),cex=0.8, font=2)
-polygon(c(input$psm_thresh,1,1,input$psm_thresh),c(Zcrit,Zcrit,max(d$Z.mean)+.5,max(d$Z.mean)+.5),
+polygon(c(input$psm_thresh,1,1,input$psm_thresh),c(Zcrit,Zcrit,max(d$Z_mean)+.5,max(d$Z_mean)+.5),
         col=adjustcolor("salmon",alpha.f=0.5),
         border=NA)
 text(.02,Zcrit+.04,label="Zcrit", col="blue",cex=1.2)
@@ -79,12 +85,18 @@ polygon(c(0,0,min(d$deltaZ),min(d$deltaZ)),
 
 dev.off()
 
+
+
+
+#######################################
+###Below is old code that divides into restoration and conservation- we decided not to do this
+#######################################
   #plot change in Z vs benefit (first  benefit=spawner abundance)
 dev.new(height=5,width=10)
 par(mfrow=c(1,2))
 #restoration sites
 #sites with greater than threshold psm- in need of restoration. 
-r<-d[d$p.psm.mean>=input$psm_thresh,]
+r<-d[d$p_psm_mean>=input$psm_thresh,]
 #standardizgin the effort and the benefit, so that they are equally weighted...we can decide if we want to weight things differently.
 
 r$deltaZ.stan<-(r$deltaZ-mean(r$deltaZ))/sd(r$deltaZ)
@@ -133,7 +145,7 @@ write.csv(rest.scores,here("analysis","output","restscores.csv"), row.names=FALS
 #conservation sites= those with below threshold psm
 dev.new(height=5,width=10)
 par(mfrow=c(1,2))
-c<-d[d$p.psm.mean<input$psm_thresh,]
+c<-d[d$p_psm_mean<input$psm_thresh,]
 c$deltaZ.stan<-(c$deltaZ-mean(c$deltaZ))/sd(c$deltaZ)
 c$spawn.n.stan<-(c$spawn.n-mean(c$spawn.n))/sd(c$spawn.n)
 cxy<-subset(c,select=c(deltaZ.stan,spawn.n.stan))
