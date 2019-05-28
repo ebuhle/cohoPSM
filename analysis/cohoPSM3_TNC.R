@@ -13,7 +13,7 @@ library(rstan)
 library(loo)
 library(shinystan)
 library(rstanarm)
-library(brms)
+# library(brms)
 library(Hmisc)
 library(matrixStats)
 library(here)
@@ -477,20 +477,21 @@ polygon(c(newZ[newsites==show_num], rev(newZ[newsites==show_num])),
         c(colQuantiles(psm_pred[,newsites==show_num], probs = 0.05),
           rev(colQuantiles(psm_pred[,newsites==show_num], probs = 0.95))),
         col = c2t, border = NA)
-lines(newZ[newsites==show_num], colMedians(psm_pred[,newsites==show_num]), lwd = 4)
+lines(newZ[newsites==show_num], colMedians(psm_pred[,newsites==show_num]), lwd = 2)
 points(Z[show_num], PSM[show_num], pch = 16, col = dzcols[show_num], cex = 1.5)
 # selected site: posterior density of PSM at z_crit
-vioplot2(psm_pred_show_site, at = z_out$z_crit[show_num], 
-         add = TRUE, col = NULL, border = "black", wex = 0.15, drawRect = FALSE, pchMed = "")
+vioplot2(psm_pred_show_site, at = z_out$z_crit[show_num], add = TRUE, 
+         col = NULL, border = "black", lwd = 2, wex = 0.15, drawRect = FALSE, pchMed = "")
 abline(v = z_out$z_crit[show_num], col = "red")
 text(z_out$z_crit[show_num], par("usr")[3] - 0.03, bquote(italic(z)[crit]), adj = c(0.5,0), 
      xpd = TRUE, col = "red")
 # selected site: posterior density of z; delta_z
 vioplot2(Z_draws[,show_num], quantiles = alpha, horizontal = TRUE, at = PSM[show_num],
-         add = TRUE, col = NULL, border = "black", wex = 0.05, drawRect = FALSE, pchMed = "")
+         add = TRUE, col = NULL, border = "black", lwd = 2, lwd.quantile = 2, wex = 0.05, 
+         drawRect = FALSE, pchMed = "")
 qz <- quantile(Z_draws[,show_num], alpha)
 arrows(x0 = qz, x1 = z_out$z_crit[show_num], y0 = PSM[show_num], 
-       col = dzcols[show_num], length = 0.1)
+       col = dzcols[show_num], length = 0.1, lwd = 2)
 text(0.25*qz + 0.75*z_out$z_crit[show_num], PSM[show_num] + 0.01, expression(Delta * italic(z)), 
      adj = c(0.5,0), col = dzcols[show_num])
 # PSM threshold and all z_crit values
