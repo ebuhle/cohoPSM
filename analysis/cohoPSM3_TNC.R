@@ -6,6 +6,9 @@ options(device = ifelse(.Platform$OS.type == "windows", "windows", "quartz"))
 options(mc.cores = parallel::detectCores(logical = FALSE) - 1)
 library(yarrr)
 library(vioplot)
+library(colourvalues)
+library(viridis)
+library(shape)
 library(rstan)
 library(loo)
 library(shinystan)
@@ -21,6 +24,8 @@ source(here("analysis","functions","extract1.R"))
 source(here("analysis","functions","stan_init.R"))
 source(here("analysis","functions","stan_init_cv.R"))
 source(here("analysis","functions","kfold_partition.R"))
+source(here("analysis","functions","sem_psm_predict.R"))
+source(here("analysis","functions","sem_z_crit.R"))
 source(here("analysis","functions","vioplot2.R"))
 
 # read and wrangle data
@@ -421,16 +426,15 @@ save(stan_psm_cv_site_list, stan_psm_cv_site_mods, file = here("analysis","resul
 # Highlight a selected site and show detail
 #----------------------------------------------------------------------
 
+save_plot <- TRUE
 psm_crit <- 0.3   # PSM threshold
 alpha <- 0.9  # credibility level
 prediction_level <- "site"  # "site" or "year"-within-site
 show_site <- "Big Scandia Creek"
 show_num <- grep(show_site, levels(psm$site))
-c1 <- "darkgray"  # posterior predictive PSM curves, all sites
-c2 <- "gray"  # highlighted site
-c2t <- transparent(c2, 0.5)
 
-Z <- colMedians(extract1(stan_psm, "Z")[,,1])
+Z_draws <- extract1(stan_psm, "Z")[,,1]
+Z <- colMedians(Z_draws)
 PSM <- colMedians(sem_psm_predict(stan_psm, data = stan_dat, newsites = 1:stan_dat$S, 
                                   level = prediction_level, transform = TRUE))  # use estimated Z
 z_out <- sem_z_crit(stan_psm, data = stan_dat, psm_crit = psm_crit, 
@@ -444,32 +448,60 @@ psm_pred <- sem_psm_predict(stan_psm, data = stan_dat, newsites = newsites, newZ
 psm_pred_show_site <- sem_psm_predict(stan_psm, data = stan_dat, newsites = show_num,
                                       newZ = z_out$z_crit[show_num], transform = TRUE)
 
+c1 <- transparent("darkgray", 0.3)  # posterior predictive PSM curves, all sites
+c2 <- "gray"  # highlighted site
+c2t <- transparent(c2, 0.6)
+dzcols <- color_values(z_out$delta_z, palette = t(col2rgb(cividis(256, direction = -1))))
+dzcolst <- transparent(dzcols, 0.1)
 
-dev.new()
-# png(filename=here("analysis","results","figures","psm_z_threshold.png"),
-#     width=7*0.75, height=15*0.75, units="in", res=300, type="cairo-png")
 
-plot(Z, PSM, pch = "", xlim = range(newZ), ylim = c(0,1), xaxs = "i",
-     xlab = bquote("Urbanization (" * italic(Z) * ")"), ylab = "Predicted PSM",
-     las = 1, cex.axis = 1.2, cex.lab = 1.5)
 
+if(save_plot) {
+  png(filename=here("analysis","results","figures","psm_z_threshold.png"),
+      width=7.5, height=7, units="in", res=300, type="cairo-png") 
+} else {
+  dev.new(width = 7.5, height = 7)
+}
+
+par(mar = c(5.1, 4.2, 4.1, 4))
+      
+plot(Z, PSM, pch = "", las = 1, cex.axis = 1.2, cex.lab = 1.5,
+     xlim = range(newZ), ylim = c(0,1), xaxs = "i",
+     xlab = bquote("Urbanization (" * italic(Z) * ")"), ylab = "Predicted PSM")
+# all PSM vs. Z curves and current conditions
 for(j in 1:stan_dat$S)
   lines(newZ[newsites==j], colMedians(psm_pred[,newsites==j]), col = c1)
-
-lines(newZ[newsites==show_num], colMedians(psm_pred[,newsites==show_num]), lwd = 4)
+points(Z, PSM, pch = 16, cex = 1.5, col = dzcolst)
+# selected site: PSM vs. Z curve 
 polygon(c(newZ[newsites==show_num], rev(newZ[newsites==show_num])),
         c(colQuantiles(psm_pred[,newsites==show_num], probs = 0.05),
           rev(colQuantiles(psm_pred[,newsites==show_num], probs = 0.95))),
         col = c2t, border = NA)
-vioplot2(psm_pred_show_site, at = z_out$z_crit[show_num], add = TRUE,
-         col = NULL, border = "black", wex = 0.15, drawRect = FALSE, pchMed = "")
-points(Z, PSM, pch = 16, cex = 1.5, col = ifelse(1:stan_dat$S == show_num, "black", c1))
+lines(newZ[newsites==show_num], colMedians(psm_pred[,newsites==show_num]), lwd = 4)
+points(Z[show_num], PSM[show_num], pch = 16, col = dzcols[show_num], cex = 1.5)
+# selected site: posterior density of PSM at z_crit
+vioplot2(psm_pred_show_site, at = z_out$z_crit[show_num], 
+         add = TRUE, col = NULL, border = "black", wex = 0.15, drawRect = FALSE, pchMed = "")
 abline(v = z_out$z_crit[show_num], col = "red")
-
+text(z_out$z_crit[show_num], par("usr")[3] - 0.03, bquote(italic(z)[crit]), adj = c(0.5,0), 
+     xpd = TRUE, col = "red")
+# selected site: posterior density of z; delta_z
+vioplot2(Z_draws[,show_num], quantiles = alpha, horizontal = TRUE, at = PSM[show_num],
+         add = TRUE, col = NULL, border = "black", wex = 0.05, drawRect = FALSE, pchMed = "")
+qz <- quantile(Z_draws[,show_num], alpha)
+arrows(x0 = qz, x1 = z_out$z_crit[show_num], y0 = PSM[show_num], 
+       col = dzcols[show_num], length = 0.1)
+text(0.25*qz + 0.75*z_out$z_crit[show_num], PSM[show_num] + 0.01, expression(Delta * italic(z)), 
+     adj = c(0.5,0), col = dzcols[show_num])
+# PSM threshold and all z_crit values
 abline(h = psm_crit, col = "red", lwd = 2)
+text(par("usr")[1] - 0.02, psm_crit, bquote(PSM[crit]), adj = c(1,0.5), col = "red", xpd = TRUE)
 rug(z_out$z_crit, col = "red")
+shape::colorlegend(cividis(100, direction = -1, alpha = 0.9), 
+                   zlim = round(range(z_out$delta_z)), dz = 1,
+                   digit = 0, main = expression(Delta * italic(z)))
 
-# dev.off()
+if(save_plot) dev.off()
 
 
 
