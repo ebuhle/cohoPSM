@@ -499,7 +499,7 @@ text(par("usr")[1] - 0.02, psm_crit, bquote(PSM[crit]), adj = c(1,0.5), col = "r
 rug(z_out$z_crit, col = "red")
 shape::colorlegend(cividis(100, direction = -1, alpha = 0.9), 
                    zlim = round(range(z_out$delta_z)), dz = 1,
-                   digit = 0, main = expression(Delta * italic(z)))
+                   digit = 0, main = expression(Delta * italic(z)), main.cex = 1.5)
 
 if(save_plot) dev.off()
 
