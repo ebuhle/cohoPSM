@@ -477,7 +477,7 @@ polygon(c(newZ[newsites==show_num], rev(newZ[newsites==show_num])),
         c(colQuantiles(psm_pred[,newsites==show_num], probs = 0.05),
           rev(colQuantiles(psm_pred[,newsites==show_num], probs = 0.95))),
         col = c2t, border = NA)
-lines(newZ[newsites==show_num], colMedians(psm_pred[,newsites==show_num]), lwd = 2)
+lines(newZ[newsites==show_num], colMedians(psm_pred[,newsites==show_num]), lwd = 3)
 points(Z[show_num], PSM[show_num], pch = 16, col = dzcols[show_num], cex = 1.5)
 # selected site: posterior density of PSM at z_crit
 vioplot2(psm_pred_show_site, at = z_out$z_crit[show_num], add = TRUE, 
