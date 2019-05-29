@@ -454,8 +454,6 @@ c2t <- transparent(c2, 0.6)
 dzcols <- color_values(z_out$delta_z, palette = t(col2rgb(cividis(256, direction = -1))))
 dzcolst <- transparent(dzcols, 0.1)
 
-
-
 if(save_plot) {
   png(filename=here("analysis","results","figures","psm_z_threshold.png"),
       width=7.5, height=7, units="in", res=300, type="cairo-png") 
@@ -478,13 +476,16 @@ polygon(c(newZ[newsites==show_num], rev(newZ[newsites==show_num])),
           rev(colQuantiles(psm_pred[,newsites==show_num], probs = 0.95))),
         col = c2t, border = NA)
 lines(newZ[newsites==show_num], colMedians(psm_pred[,newsites==show_num]), lwd = 3)
-points(Z[show_num], PSM[show_num], pch = 16, col = dzcols[show_num], cex = 1.5)
 # selected site: posterior density of PSM at z_crit
 vioplot2(psm_pred_show_site, at = z_out$z_crit[show_num], add = TRUE, 
          col = NULL, border = "black", lwd = 2, wex = 0.15, drawRect = FALSE, pchMed = "")
 abline(v = z_out$z_crit[show_num], col = "red")
 text(z_out$z_crit[show_num], par("usr")[3] - 0.03, bquote(italic(z)[crit]), adj = c(0.5,0), 
      xpd = TRUE, col = "red")
+# selected site: delta_PSM (change in median PSM risk at z_crit relative to current)
+segments(x0 = z_out$z_crit[show_num], x1 = Z[show_num], y0 = median(psm_pred_show_site), lty = 2)
+arrows(x0 = Z[show_num], y0 = PSM[show_num], y1 = median(psm_pred_show_site), length = 0.1)
+text(Z[show_num] + 0.02, 0.75*PSM[show_num] + 0.25*median(psm_pred_show_site), expression(Delta * "PSM"), adj = 0)
 # selected site: posterior density of z; delta_z
 vioplot2(Z_draws[,show_num], quantiles = alpha, horizontal = TRUE, at = PSM[show_num],
          add = TRUE, col = NULL, border = "black", lwd = 2, lwd.quantile = 2, wex = 0.05, 
@@ -494,6 +495,8 @@ arrows(x0 = qz, x1 = z_out$z_crit[show_num], y0 = PSM[show_num],
        col = dzcols[show_num], length = 0.1, lwd = 2)
 text(0.25*qz + 0.75*z_out$z_crit[show_num], PSM[show_num] + 0.01, expression(Delta * italic(z)), 
      adj = c(0.5,0), col = dzcols[show_num])
+# selected site: current conditions
+points(Z[show_num], PSM[show_num], pch = 16, col = dzcols[show_num], cex = 1.5)
 # PSM threshold and all z_crit values
 abline(h = psm_crit, col = "red", lwd = 2)
 text(par("usr")[1] - 0.02, psm_crit, bquote(PSM[crit]), adj = c(1,0.5), col = "red", xpd = TRUE)
@@ -504,6 +507,45 @@ shape::colorlegend(cividis(100, direction = -1, alpha = 0.9),
 
 if(save_plot) dev.off()
 
+
+#----------------------------------------------------------------------
+# Delta z vs. Benefit
+#
+# Plot site-specific delta_z (calculated above) against a selected
+# "benefit" (which may be delta_PSM or some independent attribute
+# of subbasins). Divide plot into "restoration" (delta_z < 0)
+# and "conservation" (delta_z > 0) regions and shade points by
+# (standardized) benefit/delta_z, interpreted either as "return on
+# investment" (for restoration) or "sensitivity" (for conservation).
+#----------------------------------------------------------------------
+
+benefit <- "delta_PSM"  # choose variable for y-axis
+
+if(benefit == "delta_PSM") {
+  psm_pred_z_crit <- sem_psm_predict(stan_psm, data = stan_dat, newsites = 1:stan_dat$S, 
+                                     newZ = z_out$z_crit, level = prediction_level, transform = TRUE)
+  delta_psm <- colMedians(psm_pred_z_crit) - PSM
+}
+
+dbdzcols <- color_values(abs(delta_psm)/z_out$delta_z, palette = t(col2rgb(cividis(256, direction = -1))))
+dbdzcolst <- transparent(dzcols, 0.1)
+  
+if(save_plot) {
+  png(filename=here("analysis","results","figures","delta_z_vs_benefit.png"),
+      width=7, height=7, units="in", res=300, type="cairo-png") 
+} else {
+  dev.new(width = 7, height = 7)
+}
+
+par(mar = c(5.1, 4.2, 4.1, 4))
+
+plot(z_out$delta_z, delta_psm, pch = "", las = 1, cex.axis = 1.2, cex.lab = 1.5,
+     xlab = expression(Delta * italic(z)), 
+     ylab = ifelse(benefit=="delta_PSM", expression(Delta * "PSM"), benefit))
+abline(v = 0)
+points(z_out$delta_z, delta_psm, pch = 16, col = dbdzcolst, cex = 1.5)
+
+if(save_plot) dev.off()
 
 
 
