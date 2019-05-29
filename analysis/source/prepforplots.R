@@ -1,13 +1,14 @@
 #preps data files for plotting (in deltaZ_vs_benefits.R or for shiny app in app.R)
 ## as a mock up of what we may want to do, use mean abundance of spawning salmon as the measure of abundance.
-spawnmn<-aggregate(spawn$n,list(spawn$ID,spawn$site),mean)
-colnames(spawnmn)<-c("ID","site", "spawn.n")
-spawnmn$ID<-as.character(spawnmn$ID)
+#spawnmn<-aggregate(spawn$n,list(spawn$ID,spawn$site),mean)
+#colnames(spawnmn)<-c("ID","site", "spawn.n")
+#spawnmn$ID<-as.character(spawnmn$ID)
 
 #get site names associate with ID numbers
-siteid<-subset(spatial,select=c(ID,site))
-siteid$ID<-as.character(siteid$ID)
-spatial_pred$ID<-as.character(spatial_pred$ID)
+#siteid<-subset(spatial,select=c(ID,site))
+#siteid$ID<-as.character(siteid$ID)
+#spatial_pred$ID<-as.character(spatial_pred$ID)
+#Use only predicted data 
 
 #Get number of salmon species present in in each stream
 salmon$Chin_Presence_m<-salmon$Chin_Presence
@@ -32,29 +33,25 @@ salmon$nsp_spawn<-rowSums(cbind(salmon$Chin_Spawn,salmon$Coho_Spawn,salmon$Chum_
 salmon$nsp_rear<-rowSums(cbind(salmon$Chin_Rear,salmon$Coho_Rear,salmon$Chum_Rear),na.rm=TRUE)
 salmon$nsp_pres<-rowSums(cbind(salmon$Chin_Presence,salmon$Coho_Presence,salmon$Chum_Presence),na.rm=TRUE)
 
-## merge in spawner data
-if(allsites==FALSE){
+## merge spatial, psm, and salmon information
+##do not merge in spawner data to predicted stuff
+if(predsites==FALSE){
   psm_pre<-psm_pre[1:51,]
   psm_pre$site<-factor(psm_pre$site)
-  d1<-full_join(psm_pre,spawnmn)}
-if(allsites==TRUE){
-  d1<-full_join(psm_pre,spawnmn)
-  spatial<-left_join(spatial_pred,siteid)
-  d1<-left_join(d1,siteid)
-  #get ID from site column into ID column for sites that don't have it currently.
-  d1$ID[52:length(d1$ID)]<-d1$site[52:length(d1$ID)]#this is a problem- there are duplicate ID numbers..
-  #for now just remove the rows without a site name 
-  d1<-d1[-which(as.numeric(d1$ID)<56 & as.numeric(d1$site)<56),]
-  }
+  d3<-full_join(psm_pre,spawnmn)}
+if(predsites==TRUE){
+  goo<-psm_pre[52:dim(psm_pre)[1],]
+  colnames(goo)[1]<-"ID"
+  goo$ID<-as.integer(goo$ID)
+  d1<-left_join(goo,spatial_pred)
+    }
 
 #merge the salmonscape data with the spatial data
 colnames(salmon)[1]<-"ID"
-salmon$ID<-as.character(salmon$ID)
-spatial2<-left_join(spatial,salmon)
+salmon$ID<-as.integer(salmon$ID)
 
 ## add in spatial data
-d2<-full_join(d1,spatial2, by="ID")
-d<-d2
+d<-full_join(d1,salmon, by="ID")
 
 #plot(psm_pre$Z.mean,psm_pre$p.psm.mean,)
 #A cheap way to get Zcrit associated with threshold PSM. 
