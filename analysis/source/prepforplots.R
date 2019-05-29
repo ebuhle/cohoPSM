@@ -3,11 +3,34 @@
 spawnmn<-aggregate(spawn$n,list(spawn$ID,spawn$site),mean)
 colnames(spawnmn)<-c("ID","site", "spawn.n")
 spawnmn$ID<-as.character(spawnmn$ID)
+
 #get site names associate with ID numbers
 siteid<-subset(spatial,select=c(ID,site))
 siteid$ID<-as.character(siteid$ID)
 spatial_pred$ID<-as.character(spatial_pred$ID)
 
+#Get number of salmon species present in in each stream
+salmon$Chin_Presence_m<-salmon$Chin_Presence
+salmon$Chum_Presence_m<-salmon$Chum_Presence
+salmon$Coho_Presence_m<-salmon$Coho_Presence
+salmon$Chin_Spawn_m<-salmon$Chin_Spawn
+salmon$Chum_Spawn_m<-salmon$Chum_Spawn
+salmon$Coho_Spawn_m<-salmon$Coho_Spawn
+salmon$Chin_Rear_m<-salmon$Chin_Rear
+salmon$Chum_Rear_m<-salmon$Chum_Rear
+salmon$Coho_Rear_m<-salmon$Coho_Rear
+salmon$Chin_Presence[!is.na(salmon$Chin_Presence_m) & salmon$Chin_Presence_m>0]<-1
+salmon$Coho_Presence[!is.na(salmon$Coho_Presence_m) & salmon$Coho_Presence_m>0]<-1
+salmon$Chum_Presence[!is.na(salmon$Chum_Presence_m) & salmon$Chum_Presence_m>0]<-1
+salmon$Chin_Rear[!is.na(salmon$Chin_Rear_m) & salmon$Chin_Rear_m>0]<-1
+salmon$Coho_Rear[!is.na(salmon$Coho_Rear_m) & salmon$Coho_Rear_m>0]<-1
+salmon$Chum_Rear[!is.na(salmon$Chum_Rear_m) & salmon$Chum_Rear_m>0]<-1
+salmon$Chin_Spawn[!is.na(salmon$Chin_Spawn_m) & salmon$Chin_Spawn_m>0]<-1
+salmon$Coho_Spawn[!is.na(salmon$Coho_Spawn_m) & salmon$Coho_Spawn_m>0]<-1
+salmon$Chum_Spawn[!is.na(salmon$Chum_Spawn_m) & salmon$Chum_Spawn_m>0]<-1
+salmon$nsp_spawn<-rowSums(cbind(salmon$Chin_Spawn,salmon$Coho_Spawn,salmon$Chum_Spawn),na.rm=TRUE)
+salmon$nsp_rear<-rowSums(cbind(salmon$Chin_Rear,salmon$Coho_Rear,salmon$Chum_Rear),na.rm=TRUE)
+salmon$nsp_pres<-rowSums(cbind(salmon$Chin_Presence,salmon$Coho_Presence,salmon$Chum_Presence),na.rm=TRUE)
 
 ## merge in spawner data
 if(allsites==FALSE){
@@ -45,10 +68,10 @@ d$Zcrit<-Zcrit
 d$deltaZ<-d$Zcrit-d$Z_mean
 
 
+
 #If desired, use pared down psm_pre file, with just named sites (i.e. sites for which PSM was measured rather than predicted from mdoel)
 #if(allsites==FALSE){d<-d[1:51,]}
-
 #add a column for the colors to plot for whether or not site has below threshold psm
-d$psmcol<-"darkred" 
-d$psmcol[d$p_psm_mean<input$psm_thresh]<-"lightgreen"
+d$psmshape<-17 
+d$psmshape[d$p_psm_mean<input$psm_thresh]<-19
 

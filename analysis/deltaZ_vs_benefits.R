@@ -50,13 +50,13 @@ quartz()
 par(mfrow=c(1,3))
 #plot relationship of PSM and Z
 
-plot(d$p_psm_mean, d$Z_mean, pch=19,col=d$psmcol, cex.lab=1.2,cex.axis=1.2,cex=2, 
-     ylab="Urbanization score (Z)", xlab= "Mean Pred.PSM")
-abline(v=input$psm_thresh, lty=2, lwd=2)
+plot(d$Z_mean,d$p_psm_mean, pch=19,col=d$psmcol, cex.lab=1.2,cex.axis=1.2,cex=2, 
+     xlab="Urbanization score (Z)", ylab= "Mean Pred.PSM")
+abline(h=input$psm_thresh, lty=2, lwd=2)
 text(input$psm_thresh+.02,min(d$Z_mean),label="PSM threshold", cex=1.2)
-abline(h=Zcrit, lty=2, lwd=2, col="blue")
+abline(v=Zcrit, lty=2, lwd=2, col="blue")
 #text(psm_pre3$p.psm.mean, psm_pre3$Z.mean, labels=as.numeric(as.factor(psm_pre3$site)),cex=0.8, font=2)
-polygon(c(input$psm_thresh,1,1,input$psm_thresh),c(Zcrit,Zcrit,max(d$Z_mean)+.5,max(d$Z_mean)+.5),
+polygon(c(Zcrit,Zcrit,max(d$Z_mean, na.rm=TRUE)+.5,max(d$Z_mean, na.rm=TRUE)+.5),c(input$psm_thresh,1,1,input$psm_thresh),
         col=adjustcolor("salmon",alpha.f=0.5),
         border=NA)
 text(.02,Zcrit+.04,label="Zcrit", col="blue",cex=1.2)
@@ -64,9 +64,9 @@ text(.02,Zcrit+.04,label="Zcrit", col="blue",cex=1.2)
 #plot change in Z vs benefit (first  benefit=spawner abundance)
 plot(d$Z_mean, d$spawn.n, cex=2,cex.lab=1.2,cex.axis=1.2,xlab="Urbanization", ylab= "Benefit = spawner abundance", type="p", pch=19, col=d$psmcol)
      ## Step 4. Compare to other benefits of interest- abundance or presence of other salmon species for all sites, human pops, stream biodiversity. Can blake get these?
-text(d$Z_mean, d$spawn.n, labels=as.numeric(as.factor(d$site)),cex=0.8, font=2)
+#text(d$Z_mean, d$spawn.n, labels=as.numeric(as.factor(d$site)),cex=0.8, font=2)
 polygon(c(Zcrit,Zcrit,max(d$Z_mean,na.rm=TRUE),max(d$Z_mean,na.rm=TRUE)),
-        c(Zcrit,max(d$spawn.n, na.rm=TRUE),max(d$spawn.n, na.rm=TRUE),Zcrit),col=adjustcolor("salmon",alpha.f=0.5),
+        c(0,max(d$spawn.n, na.rm=TRUE)+ .1*max(d$spawn.n, na.rm=TRUE),max(d$spawn.n, na.rm=TRUE)+ .1*max(d$spawn.n, na.rm=TRUE),0),col=adjustcolor("salmon",alpha.f=0.5),
         border=NA)
 abline(v=Zcrit, lty=2, lwd=2, col="blue")
 
@@ -76,42 +76,81 @@ head(d)
 #plot change in Z vs benefit of number of people living nearby (don't have this data right now, so making it up as a function of Z with some noist)
 #plot(psm_pre3$Z.mean,pop.pred)#check
 plot(d$Z_mean,d$pop_census, cex=2,cex.lab=1.2,cex.axis=1.2,xlab="Urbanization", ylab= "Benefit = number of people nearby", type="p", pch=19, col=d$psmcol)
-text(d$Z_mean, d$pop_census, labels=as.numeric(as.factor(d$site)),cex=0.8, font=2)
+#text(d$Z_mean, d$pop_census, labels=as.numeric(as.factor(d$site)),cex=0.8, font=2)
 polygon(c(Zcrit,Zcrit,max(d$Z_mean,na.rm=TRUE),max(d$Z_mean,na.rm=TRUE)),
-        c(Zcrit,max(d$pop_census, na.rm=TRUE),max(d$pop_census, na.rm=TRUE),Zcrit),col=adjustcolor("salmon",alpha.f=0.5),
+        c(0,max(d$pop_census, na.rm=TRUE),max(d$pop_census, na.rm=TRUE),0),col=adjustcolor("salmon",alpha.f=0.5),
         border=NA)
 abline(v=Zcrit, lty=2, lwd=2, col="blue")
 
 mtext(side=1,"high",line=4,adj=1,cex=0.8)
 mtext(side=1,"low",line=4,adj=0,cex=0.8)
 
-quartz()
-par(mfrow=c(1,3))
-
-
-#plot meters of stream with coho presence
-plot(d$Z_mean,d$pop_census, cex=2,cex.lab=1.2,cex.axis=1.2,xlab="Urbanization", ylab= "Benefit = number of people nearby", type="p", pch=19, col=d$psmcol)
-text(d$Z_mean, d$pop_census, labels=as.numeric(as.factor(d$site)),cex=0.8, font=2)
-polygon(c(Zcrit,Zcrit,max(d$Z_mean),max(d$Z_mean)),
-        c(Zcrit,max(d$pop_census, na.rm=TRUE),max(d$pop_census, na.rm=TRUE),Zcrit),col=adjustcolor("salmon",alpha.f=0.5),
-        border=NA)
-
-mtext(side=1,"high",line=4,adj=1,cex=0.8)
-mtext(side=1,"low",line=4,adj=0,cex=0.8)
-abline(v=Zcrit, lty=2, lwd=2, col="blue")
-
-
 
 
 quartz()
-par(mfrow=c(1,3))
-
-
+par(mfrow=c(1,2))
 #plot meters of stream with coho present
-plot(d$Z_mean,d$Presence..m., cex=2,cex.lab=1.2,cex.axis=1.2,xlab="Urbanization", ylab= "Benefit = m stream with coho present", type="p", pch=19, col=d$psmcol)
+plot(d$Z_mean,d$Coho_Presence_m, cex=1.5,cex.lab=1.2,cex.axis=1.2,xlab="Urbanization", ylab= "Benefit = m stream with coho present", type="p", pch=d$psmshape, col="gray")
 #text(d$Z_mean, d$Presence..m, labels=as.numeric(as.factor(d$site)),cex=0.8, font=2)
 polygon(c(Zcrit,Zcrit,max(d$Z_mean, na.rm=TRUE),max(d$Z_mean, na.rm=TRUE)),
-        c(Zcrit,max(d$Presence..m, na.rm=TRUE),max(d$Presence..m, na.rm=TRUE),Zcrit),col=adjustcolor("salmon",alpha.f=0.5),
+        c(0,max(d$Coho_Presence_m, na.rm=TRUE),max(d$Coho_Presence_m, na.rm=TRUE),0),col=adjustcolor("salmon",alpha.f=0.5),
+        border=NA)
+abline(v=Zcrit, lty=2, lwd=2, col="blue")
+
+mtext(side=1,"high",line=4,adj=1,cex=0.8)
+mtext(side=1,"low",line=4,adj=0,cex=0.8)
+
+
+#plot number of salmon spp present
+#Add scores to prioritize them
+plot(d$Z_mean,as.integer(d$nsp_pres),cex=2,cex.lab=1.2,cex.axis=1.2,xlab="Urbanization", ylab= "Benefit = Number of salmon species", type="p", pch=d$psmshape,col="gray")
+#text(d$Z_mean, d$nsp_pres, labels=as.numeric(as.factor(d$site)),cex=0.8, font=2)
+polygon(c(Zcrit,Zcrit,max(d$Z_mean, na.rm=TRUE),max(d$Z_mean, na.rm=TRUE)),
+        c(0,max(d$nsp_pres, na.rm=TRUE),max(d$nsp_pres, na.rm=TRUE),0),col=adjustcolor("salmon",alpha.f=0.5),
+        border=NA)
+abline(v=Zcrit, lty=2, lwd=2, col="blue")
+
+mtext(side=1,"high",line=4,adj=1,cex=0.8)
+mtext(side=1,"low",line=4,adj=0,cex=0.8)
+
+
+#plot meters of stream with spawning coho
+plot(d$Z_mean,d$Coho_Spawn,cex=2,cex.lab=1.2,cex.axis=1.2,xlab="Urbanization", ylab= "Benefit = m stream with coho spawning", type="p", pch=19, col=d$psmcol)
+#text(d$Z_mean, d$Spawning..m, labels=as.numeric(as.factor(d$site)),cex=0.8, font=2)
+polygon(c(Zcrit,Zcrit,max(d$Coho_Spawn, na.rm=TRUE),max(d$Coho_Spawn, na.rm=TRUE)),
+        c(0,max(d$Coho_Spawn, na.rm=TRUE),max(d$Coho_Spawn, na.rm=TRUE),0),col=adjustcolor("salmon",alpha.f=0.5),
+        border=NA)
+abline(v=Zcrit, lty=2, lwd=2, col="blue")
+
+mtext(side=1,"high",line=4,adj=1,cex=0.8)
+mtext(side=1,"low",line=4,adj=0,cex=0.8)
+
+
+
+#Plot meters of coho spawning and number of species present, number of species spawning
+quartz()
+par(mfrow=c(1,3))
+#plot meters of stream with coho present
+#Give each site a score
+#standardizgin the effort and the benefit, so that they are equally weighted...we can decide if we want to weight things differently.
+
+d$Coho_Pres_stan<-d$Coho_Presence_m-mean(d$Coho_Presence_m, na.rm=TRUE)
+dxy<-subset(d,select=c(Z_mean,Coho_Pres_stan))
+
+score<-as.matrix(dist(rbind(c(0,0),dxy), method="euclidean"))[1,-1]
+
+dxy<-cbind(d$site.x,dxy,score)
+dxy<-dxy[order(dxy$score),]
+myPalette <- colorRampPalette(brewer.pal(9, "YlGnBu")) #### Gives us a heat map look
+cols = myPalette(length(score))
+dxy<- data.frame(cbind(dxy,cols))
+colnames(dxy)[1:3]<-c("site","Z","benefit")
+
+
+plot(d$Z_mean,d$Coho_Presence_m, cex=2,cex.lab=1.2,cex.axis=1.2,xlab="Urbanization", ylab= "Benefit = m stream with coho present", type="p", pch=19, col=d$psmcol)
+#text(d$Z_mean, d$Presence..m, labels=as.numeric(as.factor(d$site)),cex=0.8, font=2)
+polygon(c(Zcrit,Zcrit,max(d$Z_mean, na.rm=TRUE),max(d$Z_mean, na.rm=TRUE)),
+        c(0,max(d$Coho_Presence_m, na.rm=TRUE),max(d$Coho_Presence_m, na.rm=TRUE),0),col=adjustcolor("salmon",alpha.f=0.5),
         border=NA)
 abline(v=Zcrit, lty=2, lwd=2, col="blue")
 
@@ -123,7 +162,7 @@ mtext(side=1,"low",line=4,adj=0,cex=0.8)
 plot(d$Z_mean,d$Coho_Rear,cex=2,cex.lab=1.2,cex.axis=1.2,xlab="Urbanization", ylab= "Benefit = m stream with coho rearing", type="p", pch=19, col=d$psmcol)
 #text(d$Z_mean, d$Rearing..m, labels=as.numeric(as.factor(d$site)),cex=0.8, font=2)
 polygon(c(Zcrit,Zcrit,max(d$Z_mean, na.rm=TRUE),max(d$Z_mean, na.rm=TRUE)),
-        c(Zcrit,max(d$Coho_Rear, na.rm=TRUE),max(d$Coho_Rear, na.rm=TRUE),Zcrit),col=adjustcolor("salmon",alpha.f=0.5),
+        c(0,max(d$Coho_Rear, na.rm=TRUE),max(d$Coho_Rear, na.rm=TRUE),0),col=adjustcolor("salmon",alpha.f=0.5),
         border=NA)
 abline(v=Zcrit, lty=2, lwd=2, col="blue")
 
@@ -131,22 +170,14 @@ mtext(side=1,"high",line=4,adj=1,cex=0.8)
 mtext(side=1,"low",line=4,adj=0,cex=0.8)
 
 #plot meters of stream with spawning coho
-plot(d$Z_mean,d$Spawning..m.,cex=2,cex.lab=1.2,cex.axis=1.2,xlab="Urbanization", ylab= "Benefit = m stream with coho spawning", type="p", pch=19, col=d$psmcol)
+plot(d$Z_mean,d$Coho_Spawn,cex=2,cex.lab=1.2,cex.axis=1.2,xlab="Urbanization", ylab= "Benefit = m stream with coho spawning", type="p", pch=19, col=d$psmcol)
 #text(d$Z_mean, d$Spawning..m, labels=as.numeric(as.factor(d$site)),cex=0.8, font=2)
-polygon(c(Zcrit,Zcrit,max(d$Spawning..m., na.rm=TRUE),max(d$Spawning..m., na.rm=TRUE)),
-        c(Zcrit,max(d$Spawning..m., na.rm=TRUE),max(d$Spawning..m., na.rm=TRUE),Zcrit),col=adjustcolor("salmon",alpha.f=0.5),
+polygon(c(Zcrit,Zcrit,max(d$Coho_Spawn, na.rm=TRUE),max(d$Coho_Spawn, na.rm=TRUE)),
+        c(0,max(d$Coho_Spawn, na.rm=TRUE),max(d$Coho_Spawn, na.rm=TRUE),0),col=adjustcolor("salmon",alpha.f=0.5),
         border=NA)
 abline(v=Zcrit, lty=2, lwd=2, col="blue")
 
 mtext(side=1,"high",line=4,adj=1,cex=0.8)
 mtext(side=1,"low",line=4,adj=0,cex=0.8)
-
-
-
-
-
-
-dev.off()
-
 
 
