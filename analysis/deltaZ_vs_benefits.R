@@ -146,5 +146,5 @@ scores<-full_join(score_cohopres_m,score_salmonnpp)
 scores<-scores[,-6]
 scores<-scores[,-9]
 colnames(scores)[3:5]<-c("coho_pres_m","coho_pres_stan","score_coho_pres")
-write.csv(scores,file="output/scores.csv", row.names = FALSE)
+write.csv(scores,file=here("analysis","results","scores.csv"), row.names = FALSE)
 head(scores)
