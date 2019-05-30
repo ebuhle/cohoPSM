@@ -45,7 +45,7 @@ dim(d)
 ## Step 4. Plot Change in Z on x-axis and benefits of interest on the y axis
 
 #dev.new(height=8,width=16)
-pdf(here("analysis","results","testdeltaZvsbenefitsfig.pdf"), width = 16, height = 8)
+pdf(here("analysis","results","figures","testdeltaZvsbenefitsfig.pdf"), width = 16, height = 8)
 quartz(height=7,width=14)
 par(mfrow=c(2,2))
 #make a blank plot with the prioritization scheme
@@ -147,5 +147,5 @@ colnames(scores)[3:5]<-c("coho.pres.m","coho.pres.stan","score.coho.pres")
 scores_forblake<-subset(scores,select=c(ID,Z,coho.pres.m,score.coho.pres,numspp,score.numsp))
 scores_forblake[is.na(scores_forblake)]<-"-9999"
 
-write.csv(scores,file="output/scores.csv", row.names = FALSE)
+write.csv(scores,file=here("analysis","results","scores.csv"), row.names = FALSE)
 head(scores)
