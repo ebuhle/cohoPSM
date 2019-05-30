@@ -45,8 +45,8 @@ dim(d)
 ## Step 4. Plot Change in Z on x-axis and benefits of interest on the y axis
 
 #dev.new(height=8,width=16)
-pdf(here("analysis","results","testdeltaZvsbenefitsfig.pdf"), width = 16, height = 8)
-quartz(height=16,width=16)
+pdf(here("analysis","results","benefits_stream_spp_wscheme.pdf"), width = 16, height = 8)
+#quartz(height=16,width=16)
 par(mfrow=c(2,2))
 #make a blank plot with the prioritization scheme
 plot(psm_pre$Z_mean[1:51],d$p_psm_mean[1:51], pch=19, col="white", yaxt='n',xaxt='n',cex.lab=1.5,cex.axis=1.5,cex=1.52, 
@@ -90,7 +90,7 @@ mtext(side=1,"low",line=3,adj=0,cex=0.8)
 d$Coho_Pres_stan<-(d$Coho_Presence_m-mean(d$Coho_Presence_m, na.rm=TRUE))/sd(d$Coho_Presence_m, na.rm=TRUE)
 dxy<-subset(d,select=c(Z_mean,Coho_Pres_stan))
 
-score<-as.matrix(dist(rbind(c(0,max(dxy$Coho_Pres_stan,na.rm=TRUE)),dxy), method="euclidean"))[1,-1]
+score<-as.matrix(dist(rbind(c(Zcrit,max(dxy$Coho_Pres_stan,na.rm=TRUE)),dxy), method="euclidean"))[1,-1]
 
 dxy<-cbind(d$ID,dxy,d$Coho_Presence_m,score)
 dxy<-dxy[order(dxy$score),]
@@ -117,7 +117,7 @@ legend("topleft", legend=c("Lowest priority","Highest priority"), pch=19,col=c(c
 
 dxy<-subset(d,select=c(Z_mean,nsp_pres))
 
-score<-as.matrix(dist(rbind(c(0,max(dxy$nsp_pres,na.rm=TRUE)),dxy), method="euclidean"))[1,-1]
+score<-as.matrix(dist(rbind(c(Zcrit,max(dxy$nsp_pres,na.rm=TRUE)),dxy), method="euclidean"))[1,-1]
 
 dxy<-cbind(d$ID,dxy,d$nsp_pres,score)
 dxy<-dxy[order(dxy$score),]
@@ -137,6 +137,7 @@ abline(v=Zcrit, lty=2, lwd=2, col="blue")
 #mtext(side=3,"Conservation",line=0,adj=0,cex=0.8)
 mtext(side=1,"high",line=4,adj=1,cex=0.8)
 mtext(side=1,"low",line=4,adj=0,cex=0.8)
+dev.off()
 score_salmonsp<-dxy
 colnames(score_salmonsp)[3:6]<-c("numspp.stan","numspp","score.numsp","cols.numsp")
 scores<-full_join(score_cohopres_m,score_salmonsp)
@@ -147,5 +148,5 @@ colnames(scores)[3:5]<-c("coho.pres.m","coho.pres.stan","score.coho.pres")
 scores_forblake<-subset(scores,select=c(ID,Z,coho.pres.m,score.coho.pres,numspp,score.numsp))
 scores_forblake[is.na(scores_forblake)]<-"-9999"
 
-write.csv(scores,file="output/scores.csv", row.names = FALSE)
-head(scores)
+write.csv(scores_forblake,file=here("analysis","results","scores.csv"), row.names = FALSE)
+head(scores_forblake)
