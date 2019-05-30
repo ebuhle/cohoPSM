@@ -45,18 +45,18 @@ dim(d)
 ## Step 4. Plot Change in Z on x-axis and benefits of interest on the y axis
 
 #dev.new(height=8,width=16)
-pdf(here("analysis","results","benefits_stream_spp_wscheme.pdf"), width = 16, height = 8)
-#quartz(height=16,width=16)
+pdf(here("analysis","results","testdeltaZvsbenefitsfig.pdf"), width = 16, height = 8)
+quartz(height=7,width=14)
 par(mfrow=c(2,2))
 #make a blank plot with the prioritization scheme
-plot(psm_pre$Z_mean[1:51],d$p_psm_mean[1:51], pch=19, col="white", yaxt='n',xaxt='n',cex.lab=1.5,cex.axis=1.5,cex=1.52, 
+plot(psm_pre$Z_mean[1:51],d$p_psm_mean[1:51], pch=19, col="white", yaxt='n',xaxt='n',cex.lab=1.2,cex.axis=1.5,cex=1.52, 
      xlab="Urbanization", ylab= "Benefit/Biological attribute of interest")
 mtext(side=1,"high",line=3,adj=1,cex=0.8)
 mtext(side=1,"low",line=3,adj=0,cex=0.8)
-mtext(side=3,"Restoration",line=-4,adj=.9,cex=1.2)
-mtext(side=3,"Conservation",line=-4,adj=.1,cex=1.2)
-mtext(side=1,"No action needed",line=-4,adj=.1,cex=1.2)
-mtext(side=1,"Low Ecological Priority",line=-4,adj=.9,cex=1.2)
+mtext(side=3,"Restoration",line=-4,adj=.9,cex=.9)
+mtext(side=3,"Conservation",line=-4,adj=.1,cex=.9)
+mtext(side=1,"No action needed",line=-4,adj=.1,cex=.9)
+mtext(side=1,"Low Ecological Priority",line=-4,adj=.9,cex=.9)
 
 
 
@@ -69,9 +69,9 @@ abline(h=input$psm_thresh, lty=2, lwd=2)
 text(min(d$Z_mean, na.rm=TRUE)+1,input$psm_thresh+.02,label="PSM threshold", cex=1.2)
 abline(v=Zcrit, lty=2, lwd=2, col="blue")
 #text(psm_pre3$p.psm.mean, psm_pre3$Z.mean, labels=as.numeric(as.factor(psm_pre3$ID)),cex=0.8, font=2)
-polygon(c(Zcrit,Zcrit,max(d$Z_mean, na.rm=TRUE)+.5,max(d$Z_mean, na.rm=TRUE)+.5),c(input$psm_thresh,1,1,input$psm_thresh),
-        col=adjustcolor("salmon",alpha.f=0.5),
-        border=NA)
+# polygon(c(Zcrit,Zcrit,max(d$Z_mean, na.rm=TRUE)+.5,max(d$Z_mean, na.rm=TRUE)+.5),c(input$psm_thresh,1,1,input$psm_thresh),
+#         col=adjustcolor("salmon",alpha.f=0.5),
+#         border=NA)
 text(Zcrit+.04,.02,label="Zcrit", col="blue",cex=1.2)
 mtext(side=1,"high",line=3,adj=1,cex=0.8)
 mtext(side=1,"low",line=3,adj=0,cex=0.8)
@@ -94,8 +94,8 @@ score<-as.matrix(dist(rbind(c(Zcrit,max(dxy$Coho_Pres_stan,na.rm=TRUE)),dxy), me
 
 dxy<-cbind(d$ID,dxy,d$Coho_Presence_m,score)
 dxy<-dxy[order(dxy$score),]
-myPalette <- colorRampPalette(brewer.pal(9, "YlGnBu")) #### Gives us a heat map look
-cols = myPalette(length(score))
+myPalette <- colorRampPalette(brewer.pal(9, "RdYlBu")) #### Gives us a heat map look
+cols = rev(myPalette(length(score)))
 dxy<- data.frame(cbind(dxy,cols))
 colnames(dxy)[1:4]<-c("ID","Z","benefit.stan","benefit")
 
@@ -111,7 +111,7 @@ abline(v=Zcrit, lty=2, lwd=2, col="blue")
 mtext(side=1,"high",line=4,adj=1,cex=0.8)
 mtext(side=1,"low",line=4,adj=0,cex=0.8)
 score_cohopres_m<-dxy
-legend("topleft", legend=c("Lowest priority","Highest priority"), pch=19,col=c(cols[length(cols)],cols[1]), cex=.8)
+legend("topleft", legend=c("Highest priority","Lowest priority"), pch=19,col=c(cols[1],cols[length(cols)]), cex=.8, bty="n")
 
 
 
@@ -121,8 +121,8 @@ score<-as.matrix(dist(rbind(c(Zcrit,max(dxy$nsp_pres,na.rm=TRUE)),dxy), method="
 
 dxy<-cbind(d$ID,dxy,d$nsp_pres,score)
 dxy<-dxy[order(dxy$score),]
-myPalette <- colorRampPalette(brewer.pal(9, "YlGnBu")) #### Gives us a heat map look
-cols = myPalette(length(score))
+myPalette <- colorRampPalette(brewer.pal(9, "RdYlBu")) #### Gives us a heat map look
+cols = rev(myPalette(length(score)))
 dxy<- data.frame(cbind(dxy,cols))
 colnames(dxy)[1:4]<-c("ID","Z","benefit.stan","benefit")
 
@@ -137,7 +137,6 @@ abline(v=Zcrit, lty=2, lwd=2, col="blue")
 #mtext(side=3,"Conservation",line=0,adj=0,cex=0.8)
 mtext(side=1,"high",line=4,adj=1,cex=0.8)
 mtext(side=1,"low",line=4,adj=0,cex=0.8)
-dev.off()
 score_salmonsp<-dxy
 colnames(score_salmonsp)[3:6]<-c("numspp.stan","numspp","score.numsp","cols.numsp")
 scores<-full_join(score_cohopres_m,score_salmonsp)
@@ -148,5 +147,5 @@ colnames(scores)[3:5]<-c("coho.pres.m","coho.pres.stan","score.coho.pres")
 scores_forblake<-subset(scores,select=c(ID,Z,coho.pres.m,score.coho.pres,numspp,score.numsp))
 scores_forblake[is.na(scores_forblake)]<-"-9999"
 
-write.csv(scores_forblake,file=here("analysis","results","scores.csv"), row.names = FALSE)
-head(scores_forblake)
+write.csv(scores,file="output/scores.csv", row.names = FALSE)
+head(scores)
