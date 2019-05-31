@@ -27,7 +27,7 @@ spawn <- read.csv(here("data","spawner_data.csv"), header=TRUE)
 spatial_pred <- read.csv(here("data","spatial_data_predict.csv"), header=TRUE)
 #spatial<- read.csv(here("data","spatial_data.csv"), header=TRUE)
 
-salmon <- read.csv(here("data","salmonscape","WA_integrated_Fish_dist_with_WADOE_basins.csv"),header=TRUE)
+salmon <- read.csv(here("data","salmonscape","WA_integrated_Fish_coho_chinook_chum_with_WADOE.csv"),header=TRUE, skip=1)
 
 ## Step 2: Choices: select the threshold psm and you want to use, and select all IDs or only IDs for which we have PSM data (rather than predicted PSM)
 input <- as.data.frame(NA)
@@ -96,9 +96,10 @@ dxy<-subset(d,select=c(Z_mean,Coho_Pres_stan))
 score<-as.matrix(dist(rbind(c(Zcrit,max(dxy$Coho_Pres_stan,na.rm=TRUE)),dxy), method="euclidean"))[1,-1]
 
 dxy<-cbind(d$ID,dxy,d$Coho_Presence_m,score)
+dxy<-dxy[-which(is.na(dxy$Coho_Pres_stan)),]
 dxy<-dxy[order(dxy$score),]
 myPalette <- colorRampPalette(brewer.pal(9, "RdYlBu")) #### Gives us a heat map look
-cols = rev(myPalette(length(score)))
+cols = rev(myPalette(length(dxy$score)))
 dxy<- data.frame(cbind(dxy,cols))
 colnames(dxy)[1:4]<-c("ID","Z","benefit.stan","benefit")
 
@@ -124,9 +125,10 @@ dxy<-subset(d,select=c(Z_mean,nsp_pres))
 score<-as.matrix(dist(rbind(c(Zcrit,max(dxy$nsp_pres,na.rm=TRUE)),dxy), method="euclidean"))[1,-1]
 
 dxy<-cbind(d$ID,dxy,d$nsp_pres,score)
+dxy<-dxy[-which(is.na(dxy$nsp_pres)),]
 dxy<-dxy[order(dxy$score),]
 myPalette <- colorRampPalette(brewer.pal(9, "RdYlBu")) #### Gives us a heat map look
-cols = rev(myPalette(length(score)))
+cols = rev(myPalette(length(dxy$score)))
 dxy<- data.frame(cbind(dxy,cols))
 colnames(dxy)[1:4]<-c("ID","Z","benefit.stan","benefit")
 
@@ -149,24 +151,25 @@ scores<-full_join(score_cohopres_m,score_salmonsp)
 dev.off()
 
 #add m of stream with chinook present
-#d$Chin_Pres_stan<-(d$Chin_Presence_m-mean(d$Chin_Presence_m, na.rm=TRUE))/sd(d$Chin_Presence_m, na.rm=TRUE)
-d$Chin_Pres_stan<-(d$Chin_Presence_m_no.out-mean(d$Chin_Presence_m_no.out, na.rm=TRUE))/sd(d$Chin_Presence_m_no.out, na.rm=TRUE)
+d$ChinFa_Pres_stan<-(d$ChinFa_Presence_m-mean(d$ChinFa_Presence_m, na.rm=TRUE))/sd(d$ChinFa_Presence_m, na.rm=TRUE)
 
-dxy<-subset(d,select=c(Z_mean,Chin_Pres_stan))
+dxy<-subset(d,select=c(Z_mean,ChinFa_Pres_stan))
 
-score<-as.matrix(dist(rbind(c(Zcrit,max(dxy$Chin_Pres_stan,na.rm=TRUE)),dxy), method="euclidean"))[1,-1]
+score<-as.matrix(dist(rbind(c(Zcrit,max(dxy$ChinFa_Pres_stan,na.rm=TRUE)),dxy), method="euclidean"))[1,-1]
 
-#dxy<-cbind(d$ID,dxy,d$Chin_Presence_m,score)
-dxy<-cbind(d$ID,dxy,d$Chin_Presence_m_no.out,score)
+dxy<-cbind(d$ID,dxy,d$ChinFa_Presence_m,score)
+dxy<-dxy[-which(is.na(dxy$ChinFa_Pres_stan)),]
+
 dxy<-dxy[order(dxy$score),]
 myPalette <- colorRampPalette(brewer.pal(9, "RdYlBu")) #### Gives us a heat map look
-cols = rev(myPalette(length(score)))
+cols = rev(myPalette(length(dxy$score)))
+
 dxy<- data.frame(cbind(dxy,cols))
 colnames(dxy)[1:4]<-c("ID","Z","benefit.stan","benefit")
 
-pdf(here("analysis","results","figures","chinpres.pdf"), width = 8, height = 5)
+pdf(here("analysis","results","figures","chinfapres.pdf"), width = 8, height = 5)
 
-plot(dxy$Z,dxy$benefit, cex=1.5,cex.lab=1.2,cex.axis=1.2,xlab="Urbanization", ylab= "Benefit = m of stream with chinook present", type="p", pch=d$psmshape, col=dxy$cols)
+plot(dxy$Z,dxy$benefit, cex=1.5,cex.lab=1.2,cex.axis=1.2,xlab="Urbanization", ylab= "Benefit = m of stream with fall chinook present", type="p", pch=d$psmshape, col=dxy$cols)
 #text(d$Z_mean, d$Presence..m, labels=as.numeric(as.factor(d$ID)),cex=0.8, font=2)
 #polygon(c(Zcrit,Zcrit,max(dxy$Z, na.rm=TRUE),max(dxy$Z, na.rm=TRUE)),
 #        c(min(dxy$benefit, na.rm=TRUE),max(dxy$benefit, na.rm=TRUE),max(dxy$benefit, na.rm=TRUE),min(dxy$benefit, na.rm=TRUE)),col=adjustcolor("salmon",alpha.f=0.5),
@@ -182,13 +185,55 @@ dev.off()
 
 
 
-score_chinpres_m<-dxy
-colnames(score_chinpres_m)[3:6]<-c("chinpres.stan","chin.pres.m","score.chin.pres","cols.chinpres")
-scores<-full_join(scores,score_chinpres_m)
+score_chinfapres_m<-dxy
+colnames(score_chinfapres_m)[3:6]<-c("chinfapres.stan","chinfa.pres.m","score.chinfa.pres","cols.chinfapres")
+scores<-full_join(scores,score_chinfapres_m)
 colnames(scores)[3:5]<-c("coho.pres.m","coho.pres.stan","score.coho.pres")
+
+
+#add m of stream with chinook present
+d$ChinSp_Pres_stan<-(d$ChinSp_Presence_m-mean(d$ChinSp_Presence_m, na.rm=TRUE))/sd(d$ChinSp_Presence_m, na.rm=TRUE)
+
+dxy<-subset(d,select=c(Z_mean,ChinSp_Pres_stan))
+
+score<-as.matrix(dist(rbind(c(Zcrit,max(dxy$ChinSp_Pres_stan,na.rm=TRUE)),dxy), method="euclidean"))[1,-1]
+
+dxy<-cbind(d$ID,dxy,d$ChinSp_Presence_m,score)
+dxy<-dxy[-which(is.na(dxy$ChinSp_Pres_stan)),]
+
+dxy<-dxy[order(dxy$score),]
+myPalette <- colorRampPalette(brewer.pal(9, "RdYlBu")) #### Gives us a heat map look
+cols = rev(myPalette(length(dxy$score)))
+dxy<- data.frame(cbind(dxy,cols))
+colnames(dxy)[1:4]<-c("ID","Z","benefit.stan","benefit")
+
+pdf(here("analysis","results","figures","chinsppres.pdf"), width = 8, height = 5)
+
+plot(dxy$Z,dxy$benefit, cex=1.5,cex.lab=1.2,cex.axis=1.2,xlab="Urbanization", ylab= "Benefit = m of stream with spring chinook present", type="p", pch=d$psmshape, col=dxy$cols)
+#text(d$Z_mean, d$Presence..m, labels=as.numeric(as.factor(d$ID)),cex=0.8, font=2)
+#polygon(c(Zcrit,Zcrit,max(dxy$Z, na.rm=TRUE),max(dxy$Z, na.rm=TRUE)),
+#        c(min(dxy$benefit, na.rm=TRUE),max(dxy$benefit, na.rm=TRUE),max(dxy$benefit, na.rm=TRUE),min(dxy$benefit, na.rm=TRUE)),col=adjustcolor("salmon",alpha.f=0.5),
+#        border=NA)
+abline(v=Zcrit, lty=2, lwd=2, col="blue")
+#mtext(side=3,"Restoration",line=1,adj=1,cex=0.8)
+#mtext(side=3,"Conservation",line=0,adj=0,cex=0.8)
+mtext(side=1,"high",line=4,adj=1,cex=0.8)
+mtext(side=1,"low",line=4,adj=0,cex=0.8)
+legend("topright", legend=c("Highest priority","Lowest priority"), pch=19,col=c(cols[1],cols[length(cols)]), cex=.8, bty="n")
+
+dev.off()
+
+
+
+score_chinsppres_m<-dxy
+colnames(score_chinsppres_m)[3:6]<-c("chinsppres.stan","chinsp.pres.m","score.chinsp.pres","cols.chinsppres")
+scores<-full_join(scores,score_chinsppres_m)
+colnames(scores)[3:5]<-c("coho.pres.m","coho.pres.stan","score.coho.pres")
+
+
 #fix it up for Blake: remove "NAs" and replace with -9999 and remove colums that we don't care about
-scores_forblake<-subset(scores,select=c(ID,Z,coho.pres.m,score.coho.pres,chin.pres.m,score.chin.pres,numspp,score.numsp))
+scores_forblake<-subset(scores,select=c(ID,Z,coho.pres.m,score.coho.pres,chinfa.pres.m,score.chinfa.pres,chinsp.pres.m,score.chinsp.pres,numspp,score.numsp))
 scores_forblake[is.na(scores_forblake)]<-"-9999"
 
-write.csv(scores,file=here("analysis","results","scores.csv"), row.names = FALSE)
+write.csv(scores_forblake,file=here("analysis","results","scores.csv"), row.names = FALSE)
 

@@ -1,0 +1,16 @@
+deltaZ_vs_benefits README
+created by Ailene, ailene.ettinger@noaa.gov
+
+This file is a preliminary step towards using a combination of Z/deltaZ (the difference between Z and Zcrit) and biological attributes of interest (e.g. meters of stream with coho present, number of salmon spp present, etc) to prioritize sites for conservation or restoration. 
+
+Conservation = sites where coho populations have predicted PSM < PSMcrit
+Restoration = sites where coho populations have predicted PSM >PSMcrit
+
+Data sources used here:
+psm_pre: "PSM_predictions.txt",predicted PSM, from Feist et al 2017
+spatial_pred: "spatial_data_predict.csv", from Feist et al 2017
+spawn: spawner_data.csv, measured pre-spawn mortality from various sites, compiled frmo various datasources and used in Feist et al 2017
+
+salmon: WA_integrated_Fish_dist_with_WADOE_basins.csv, datalayer from salmonscape
+
+

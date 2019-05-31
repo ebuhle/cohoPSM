@@ -10,29 +10,43 @@
 #spatial_pred$ID<-as.character(spatial_pred$ID)
 #Use only predicted data 
 
-#Get number of salmon species present in in each stream
-salmon$Chin_Presence_m<-salmon$Chin_Presence
-salmon$Chin_Presence_m_no.out<-salmon$Chin_Presence_m
-salmon$Chin_Presence_m_no.out[which(salmon$Chin_Presence_m==max(salmon$Chin_Presence_m,na.rm = TRUE))]<-NA 
-salmon$Chum_Presence_m<-salmon$Chum_Presence
-salmon$Coho_Presence_m<-salmon$Coho_Presence
-salmon$Chin_Spawn_m<-salmon$Chin_Spawn
-salmon$Chum_Spawn_m<-salmon$Chum_Spawn
-salmon$Coho_Spawn_m<-salmon$Coho_Spawn
-salmon$Chin_Rear_m<-salmon$Chin_Rear
-salmon$Chum_Rear_m<-salmon$Chum_Rear
-salmon$Coho_Rear_m<-salmon$Coho_Rear
-salmon$Chin_Presence[!is.na(salmon$Chin_Presence_m) & salmon$Chin_Presence_m>0]<-1
-salmon$Coho_Presence[!is.na(salmon$Coho_Presence_m) & salmon$Coho_Presence_m>0]<-1
-salmon$Chum_Presence[!is.na(salmon$Chum_Presence_m) & salmon$Chum_Presence_m>0]<-1
-salmon$Chin_Rear[!is.na(salmon$Chin_Rear_m) & salmon$Chin_Rear_m>0]<-1
-salmon$Coho_Rear[!is.na(salmon$Coho_Rear_m) & salmon$Coho_Rear_m>0]<-1
-salmon$Chum_Rear[!is.na(salmon$Chum_Rear_m) & salmon$Chum_Rear_m>0]<-1
-salmon$Chin_Spawn[!is.na(salmon$Chin_Spawn_m) & salmon$Chin_Spawn_m>0]<-1
-salmon$Coho_Spawn[!is.na(salmon$Coho_Spawn_m) & salmon$Coho_Spawn_m>0]<-1
-salmon$Chum_Spawn[!is.na(salmon$Chum_Spawn_m) & salmon$Chum_Spawn_m>0]<-1
-salmon$nsp_spawn<-rowSums(cbind(salmon$Chin_Spawn,salmon$Coho_Spawn,salmon$Chum_Spawn),na.rm=TRUE)
-salmon$nsp_rear<-rowSums(cbind(salmon$Chin_Rear,salmon$Coho_Rear,salmon$Chum_Rear),na.rm=TRUE)
+#Sum up the three categories to get total number of meters in which each species is present
+salmon$ChinFa_Presence_m<-salmon$Total.FallChin
+salmon$ChinSp_Presence_m<-salmon$Total.SprChin
+salmon$ChinSu_Presence_m<-salmon$Total.SumChin
+salmon$ChumFa_Presence_m<-salmon$Total.FallChum
+salmon$ChumWi_Presence_m<-salmon$Total.WinChum
+salmon$ChumSu_Presence_m<-salmon$Total.SumChum
+salmon$Coho_Presence_m<-salmon$Total.Coho
+
+#Now 
+salmon$ChinFa_Presence<-salmon$Total.FallChin
+salmon$ChinSp_Presence<-salmon$Total.SprChin
+salmon$ChinSu_Presence<-salmon$Total.SumChin
+salmon$ChumWi_Presence<-salmon$Total.WinChum
+salmon$ChumFa_Presence<-salmon$Total.FallChum
+salmon$ChumSu_Presence<-salmon$Total.SumChum
+salmon$Coho_Presence<-salmon$Total.Coho
+
+salmon$ChinSp_Presence[!is.na(salmon$ChinSp_Presence) & salmon$ChinSp_Presence>0]<-1
+salmon$ChumWi_Presence[!is.na(salmon$ChumWi_Presence) & salmon$ChumWi_Presence>0]<-1
+salmon$ChinFa_Presence[!is.na(salmon$ChinFa_Presence) & salmon$ChinFa_Presence>0]<-1
+salmon$ChumFa_Presence[!is.na(salmon$ChumFa_Presence) & salmon$ChumFa_Presence>0]<-1
+salmon$ChinSu_Presence[!is.na(salmon$ChinSu_Presence) & salmon$ChinSu_Presence>0]<-1
+salmon$ChumSu_Presence[!is.na(salmon$ChumSu_Presence) & salmon$ChumSu_Presence>0]<-1
+salmon$Coho_Presence[!is.na(salmon$Coho_Presence) & salmon$Coho_Presence>0]<-1
+#Add a column for presence of any chum (spr, winter, sum) or chinook (spr, fall, sum)
+salmon$Chin_Presence<-NA
+salmon$Chin_Presence[salmon$ChinSp_Presence==1]<-1
+salmon$Chin_Presence[salmon$ChinSu_Presence==1]<-1
+salmon$Chin_Presence[salmon$ChinFa_Presence==1]<-1
+
+#Add a column for presence of any chum (spr, winter, sum) or chinook (spr, fall, sum)
+salmon$Chum_Presence<-NA
+salmon$Chum_Presence[salmon$ChumWi_Presence==1]<-1
+salmon$Chum_Presence[salmon$ChumSu_Presence==1]<-1
+salmon$Chum_Presence[salmon$ChumFa_Presence==1]<-1
+
 salmon$nsp_pres<-rowSums(cbind(salmon$Chin_Presence,salmon$Coho_Presence,salmon$Chum_Presence),na.rm=TRUE)
 
 ## merge spatial, psm, and salmon information
