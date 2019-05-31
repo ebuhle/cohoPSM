@@ -190,6 +190,5 @@ colnames(scores)[3:5]<-c("coho.pres.m","coho.pres.stan","score.coho.pres")
 scores_forblake<-subset(scores,select=c(ID,Z,coho.pres.m,score.coho.pres,chin.pres.m,score.chin.pres,numspp,score.numsp))
 scores_forblake[is.na(scores_forblake)]<-"-9999"
 
+write.csv(scores,file=here("analysis","results","scores.csv"), row.names = FALSE)
 
-write.csv(scores_forblake,file="results/scores.csv", row.names = FALSE)
-head(scores_forblake)
