@@ -12,6 +12,8 @@
 
 #Get number of salmon species present in in each stream
 salmon$Chin_Presence_m<-salmon$Chin_Presence
+salmon$Chin_Presence_m_no.out<-salmon$Chin_Presence_m
+salmon$Chin_Presence_m_no.out[which(salmon$Chin_Presence_m==max(salmon$Chin_Presence_m,na.rm = TRUE))]<-NA 
 salmon$Chum_Presence_m<-salmon$Chum_Presence
 salmon$Coho_Presence_m<-salmon$Coho_Presence
 salmon$Chin_Spawn_m<-salmon$Chin_Spawn
