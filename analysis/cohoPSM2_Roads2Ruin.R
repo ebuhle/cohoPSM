@@ -343,15 +343,15 @@ stan_psm_all <- stan(file = here("analysis","stan","cohoPSM_SEM.stan"),
                      data = stan_dat_all, 
                      init = lapply(1:3, function(i) stan_init(stan_dat_all)),
                      pars = c("a0","A","Z","phi",
-                              "mu_b0","b0_Z","sigma_b0",
-                              "mu_b_su","b_su_Z","sigma_b_su",
-                              "mu_b_fa","b_fa_Z","sigma_b_fa",
+                              "mu_b0","b0_Z","sigma_b0","b0",
+                              "mu_b_su","b_su_Z","sigma_b_su","b_su",
+                              "mu_b_fa","b_fa_Z","sigma_b_fa","b_fa",
                               "sigma_psm","p_psm"), 
                      chains = 3, iter = 12000, warmup = 2000, thin = 5,
                      control = list(stepsize = 0.05))
 
 # Print and explore fit in shinystan
-print(stan_psm_all, prob = c(0.025, 0.5, 0.975), pars = c("p_psm","Z"), include = F)
+print(stan_psm_all, prob = c(0.025, 0.5, 0.975), pars = c("p_psm","Z","b0","b_su","b_fa"), include = F)
 # launch_shinystan(stan_psm_all)
 
 # Store Z and predicted P(PSM) in matrix
