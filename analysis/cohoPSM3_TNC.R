@@ -36,6 +36,8 @@ if(file.exists(here("analysis","results","glmm_psm.RData")))    # traffic GLMM
   load(here("analysis","results","glmm_psm.RData"))
 if(file.exists(here("analysis","results","stan_psm.RData")))    # full SEM
   load(here("analysis","results","stan_psm.RData"))
+if(file.exists(here("analysis","results","stan_psm_all.RData"))) # full SEM incl WADOE basins
+  load(here("analysis","results","stan_psm_all.RData"))
 if(file.exists(here("analysis","results","stan_psm_rt.RData"))) # roads + traffic SEM
   load(here("analysis","results","stan_psm_rt.RData"))
 if(file.exists(here("analysis","results","stan_psm_tnc_cv_site.RData"))) # leave-site-out CV
@@ -433,19 +435,19 @@ prediction_level <- "site"  # "site" or "year"-within-site
 show_site <- "Big Scandia Creek"
 show_num <- grep(show_site, levels(psm$site))
 
-Z_draws <- extract1(stan_psm, "Z")[,,1]
+Z_draws <- extract1(stan_psm_all, "Z")[,,1]
 Z <- colMedians(Z_draws)
-PSM <- colMedians(sem_psm_predict(stan_psm, data = stan_dat, newsites = 1:stan_dat$S, 
+PSM <- colMedians(sem_psm_predict(stan_psm_all, data = stan_dat_all, newsites = 1:stan_dat_all$S, 
                                   level = prediction_level, transform = TRUE))  # use estimated Z
-z_out <- sem_z_crit(stan_psm, data = stan_dat, psm_crit = psm_crit, 
+z_out <- sem_z_crit(stan_psm_all, data = stan_dat_all, psm_crit = psm_crit, 
                     level = prediction_level, alpha = alpha)
-newsites <- rep(1:stan_dat$S, each = 50)
+newsites <- rep(1:stan_dat_all$S, each = 50)
 newZ <- matrix(rep(seq(min(Z, z_out$z_crit) - 0.1, 
                        max(Z, z_out$z_crit) + 0.1, 
-                       length = 50), stan_dat$S), ncol = 1)
-psm_pred <- sem_psm_predict(stan_psm, data = stan_dat, newsites = newsites, newZ = newZ,
+                       length = 50), stan_dat_all$S), ncol = 1)
+psm_pred <- sem_psm_predict(stan_psm_all, data = stan_dat_all, newsites = newsites, newZ = newZ,
                             level = prediction_level, transform = TRUE)
-psm_pred_show_site <- sem_psm_predict(stan_psm, data = stan_dat, newsites = show_num,
+psm_pred_show_site <- sem_psm_predict(stan_psm_all, data = stan_dat_all, newsites = show_num,
                                       newZ = z_out$z_crit[show_num], transform = TRUE)
 
 c1 <- transparent("darkgray", 0.3)  # posterior predictive PSM curves, all sites
@@ -467,7 +469,7 @@ plot(Z, PSM, pch = "", las = 1, cex.axis = 1.2, cex.lab = 1.5,
      xlim = range(newZ), ylim = c(0,1), xaxs = "i",
      xlab = bquote("Urbanization (" * italic(Z) * ")"), ylab = "Predicted PSM")
 # all PSM vs. Z curves and current conditions
-for(j in 1:stan_dat$S)
+for(j in 1:stan_dat_all$S)
   lines(newZ[newsites==j], colMedians(psm_pred[,newsites==j]), col = c1)
 points(Z, PSM, pch = 16, cex = 1.5, col = dzcolst)
 # selected site: PSM vs. Z curve 
