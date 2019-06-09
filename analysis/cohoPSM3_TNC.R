@@ -433,7 +433,7 @@ psm_crit <- 0.3   # PSM threshold
 alpha <- 0.9  # credibility level
 prediction_level <- "site"  # "site" or "year"-within-site
 show_site <- "Big Scandia Creek"
-show_num <- grep(show_site, levels(psm$site))
+show_num <- which(levels(psm_all$site) == show_site)
 
 Z_draws <- extract1(stan_psm_all, "Z")[,,1]
 Z <- colMedians(Z_draws)
@@ -471,7 +471,7 @@ plot(Z, PSM, pch = "", las = 1, cex.axis = 1.2, cex.lab = 1.5,
 # all PSM vs. Z curves and current conditions
 for(j in 1:stan_dat_all$S)
   lines(newZ[newsites==j], colMedians(psm_pred[,newsites==j]), col = c1)
-points(Z, PSM, pch = 16, cex = 1.5, col = dzcolst)
+points(Z, PSM, pch = ifelse(psm_all$data=="psm", 16, 1), cex = 1.5, col = dzcolst)
 # selected site: PSM vs. Z curve 
 polygon(c(newZ[newsites==show_num], rev(newZ[newsites==show_num])),
         c(colQuantiles(psm_pred[,newsites==show_num], probs = 0.05),
@@ -498,7 +498,8 @@ arrows(x0 = qz, x1 = z_out$z_crit[show_num], y0 = PSM[show_num],
 text(0.25*qz + 0.75*z_out$z_crit[show_num], PSM[show_num] + 0.01, expression(Delta * italic(z)), 
      adj = c(0.5,0), col = dzcols[show_num])
 # selected site: current conditions
-points(Z[show_num], PSM[show_num], pch = 16, col = dzcols[show_num], cex = 1.5)
+points(Z[show_num], PSM[show_num], pch = ifelse(show_site %in% psm$site, 16, 1), 
+       col = dzcols[show_num], cex = 1.5)
 # PSM threshold and all z_crit values
 abline(h = psm_crit, col = "red", lwd = 2)
 text(par("usr")[1] - 0.02, psm_crit, bquote(PSM[crit]), adj = c(1,0.5), col = "red", xpd = TRUE)
