@@ -19,8 +19,8 @@
 #' and the \emph{alpha}-th posterior quantile of estimated site-specific \emph{Z} are also
 #' calculated.
 #'
-#' @param fit Object of class \code{stanfit} representing a fitted PSM SEM. Parameters \code{b0}, 
-#' \code{b0_Z}, \code{b_ppt_su}, \code{b_su_Z}, \code{b_ppt_fa}, \code{b_fa_Z} must be monitored.
+#' @param fit Object of class \code{stanfit} representing a fitted PSM SEM. Parameters 
+#' \code{mu_b0}, \code{sigma_b0}, \code{b0_std}, and \code{b0_Z} must be monitored.
 #' @param data The data list passed to \code{stan()} to estimate \code{fit}.
 #' @param psm_crit PSM threshold in (0,1).
 #' @param level Level of grouping at which to predict. Options are \code{"site"}
@@ -50,7 +50,7 @@ sem_z_crit <- function(fit, data, psm_crit, level = "site", alpha)
     iter <- nrow(b0)
     S <- ncol(b0)
     
-    intercept <- b0  # add precip effects #
+    intercept <- as.vector(mu_b0) + as.vector(sigma_b0) * b0_std # add precip effects #
     if(level == "year") {
       delta <- matrix(rnorm(iter*S, 0, sigma_psm), iter, S)
       intercept <- intercept + delta

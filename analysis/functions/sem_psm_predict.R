@@ -8,8 +8,7 @@
 #' are set to zero). These restrictions will be lifted in a later version.
 #'
 #' @param fit Object of class \code{stanfit} representing a fitted PSM SEM. Parameters 
-#' \code{b0}, \code{b0_Z}, \code{b_ppt_su}, \code{b_su_Z}, \code{b_ppt_fa}, \code{b_fa_Z}
-#' must be monitored.
+#' \code{mu_b0}, \code{sigma_b0}, \code{b0_std}, and \code{b0_Z} must be monitored.
 #' @param data The data list passed to \code{stan()} to estimate \code{fit}.
 #' @param newsites Numeric vector of length \code{N_new} giving the site numbers 
 #' (coded as in \code{data}) for which predictions are to be made.
@@ -33,11 +32,13 @@ sem_psm_predict <- function(fit, data, newsites, newZ = NULL, level = "site", tr
   
   logit_p_psm <- with(c(data, samples), {
     
+    intercept <- as.vector(mu_b0) + as.vector(sigma_b0) * b0_std
+    
     if(is.null(newZ)) {
-      logit_p_psm_hat <- b0[,newsites] + 
+      logit_p_psm_hat <- intercept[,newsites] + 
         I0_Z*apply(sweep(Z[,newsites,,drop = FALSE], c(1,3), b0_Z, "*"), c(1,2), sum) # add precip terms #
     } else {
-      logit_p_psm_hat <- b0[,newsites] + I0_Z*b0_Z  %*% t(newZ)  # add precip terms #
+      logit_p_psm_hat <- intercept[,newsites] + I0_Z*b0_Z  %*% t(newZ)  # add precip terms #
     }
     
     if(level == "site")
