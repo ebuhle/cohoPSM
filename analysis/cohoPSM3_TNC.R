@@ -432,8 +432,9 @@ save_plot <- TRUE
 psm_crit <- 0.3   # PSM threshold
 alpha <- 0.9  # credibility level
 prediction_level <- "site"  # "site" or "year"-within-site
-show_site <- "Big Scandia Creek"
+show_site <- "400"
 show_num <- which(levels(psm_all$site) == show_site)
+show_crv <- ifelse(show_site %in% psm_all$site[psm_all$data=="psm"], show_num, stan_dat_all$S)
 
 Z_draws <- extract1(stan_psm_all, "Z")[,,1]
 Z <- colMedians(Z_draws)
@@ -441,10 +442,10 @@ PSM <- colMedians(sem_psm_predict(stan_psm_all, data = stan_dat_all, newsites = 
                                   level = prediction_level, transform = TRUE))  # use estimated Z
 z_out <- sem_z_crit(stan_psm_all, data = stan_dat_all, psm_crit = psm_crit, 
                     level = prediction_level, alpha = alpha)
-newsites <- rep(1:stan_dat_all$S, each = 50)
+newsites <- rep(sort(unique(c(stan_dat_all$site[stan_dat_all$I_fit==1], show_crv))), each = 50)
 newZ <- matrix(rep(seq(min(Z, z_out$z_crit) - 0.1, 
                        max(Z, z_out$z_crit) + 0.1, 
-                       length = 50), stan_dat_all$S), ncol = 1)
+                       length = 50), length(unique(newsites))), ncol = 1)
 psm_pred <- sem_psm_predict(stan_psm_all, data = stan_dat_all, newsites = newsites, newZ = newZ,
                             level = prediction_level, transform = TRUE)
 psm_pred_show_site <- sem_psm_predict(stan_psm_all, data = stan_dat_all, newsites = show_num,
@@ -469,15 +470,15 @@ plot(Z, PSM, pch = "", las = 1, cex.axis = 1.2, cex.lab = 1.5,
      xlim = range(newZ), ylim = c(0,1), xaxs = "i",
      xlab = bquote("Urbanization (" * italic(Z) * ")"), ylab = "Predicted PSM")
 # all PSM vs. Z curves and current conditions
-for(j in 1:stan_dat_all$S)
+for(j in unique(newsites))
   lines(newZ[newsites==j], colMedians(psm_pred[,newsites==j]), col = c1)
 points(Z, PSM, pch = ifelse(psm_all$data=="psm", 16, 1), cex = 1.5, col = dzcolst)
 # selected site: PSM vs. Z curve 
-polygon(c(newZ[newsites==show_num], rev(newZ[newsites==show_num])),
-        c(colQuantiles(psm_pred[,newsites==show_num], probs = 0.05),
-          rev(colQuantiles(psm_pred[,newsites==show_num], probs = 0.95))),
+polygon(c(newZ[newsites==show_crv], rev(newZ[newsites==show_crv])),
+        c(colQuantiles(psm_pred[,newsites==show_crv], probs = 0.05),
+          rev(colQuantiles(psm_pred[,newsites==show_crv], probs = 0.95))),
         col = c2t, border = NA)
-lines(newZ[newsites==show_num], colMedians(psm_pred[,newsites==show_num]), lwd = 3)
+lines(newZ[newsites==show_crv], colMedians(psm_pred[,newsites==show_crv]), lwd = 3)
 # selected site: posterior density of PSM at z_crit
 vioplot2(psm_pred_show_site, at = z_out$z_crit[show_num], add = TRUE, 
          col = NULL, border = "black", lwd = 2, wex = 0.15, drawRect = FALSE, pchMed = "")
