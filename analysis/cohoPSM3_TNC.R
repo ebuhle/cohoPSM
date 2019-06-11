@@ -504,7 +504,7 @@ points(Z[show_num], PSM[show_num], pch = ifelse(show_site %in% psm$site, 16, 1),
 # PSM threshold and all z_crit values
 abline(h = psm_crit, col = "red", lwd = 2)
 text(par("usr")[1] - 0.02, psm_crit, bquote(PSM[crit]), adj = c(1,0.5), col = "red", xpd = TRUE)
-rug(z_out$z_crit, col = "red")
+rug(z_out$z_crit, col = transparent("red", 0.3))
 shape::colorlegend(cividis(100, direction = -1, alpha = 0.9), 
                    zlim = round(range(z_out$delta_z)), dz = 1,
                    digit = 0, main = expression(Delta * italic(z)), main.cex = 1.5)
