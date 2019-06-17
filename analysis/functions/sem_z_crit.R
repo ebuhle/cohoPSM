@@ -47,8 +47,8 @@ sem_z_crit <- function(fit, data, psm_crit, level = "site", alpha)
   
   out <- with(c(samples, data), {
     
-    iter <- nrow(b0)
-    S <- ncol(b0)
+    iter <- nrow(b0_std)
+    S <- ncol(b0_std)
     
     intercept <- as.vector(mu_b0) + as.vector(sigma_b0) * b0_std # add precip effects #
     if(level == "year") {
