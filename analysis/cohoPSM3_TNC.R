@@ -526,8 +526,9 @@ if(save_plot) dev.off()
 benefit <- "delta_PSM"  # choose variable for y-axis
 
 if(benefit == "delta_PSM") {
-  psm_pred_z_crit <- sem_psm_predict(stan_psm, data = stan_dat, newsites = 1:stan_dat$S, 
-                                     newZ = z_out$z_crit, level = prediction_level, transform = TRUE)
+  psm_pred_z_crit <- sem_psm_predict(stan_psm_all, data = stan_dat_all, 
+                                     newsites = 1:stan_dat_all$S, newZ = z_out$z_crit, 
+                                     level = prediction_level, transform = TRUE)
   delta_psm <- colMedians(psm_pred_z_crit) - PSM
 }
 
