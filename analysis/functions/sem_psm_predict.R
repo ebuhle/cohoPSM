@@ -20,25 +20,33 @@
 #' (include year-within-site residual variation).
 #' @param transform Logical indicating whether to return the linear predictor (\code{FALSE}, 
 #' the default) or inverse-logit transform it.
+#' @param gradient Logical indicating whether to compute the gradient of PSM risk with respect to the
+#' latent factor(s).
 #'
-#' @return An \code{iter x N_new} matrix containing posterior samples of the predicted probability 
+#' @return List with elements \describe{
+#' \item{\code{est}} An \code{iter x N_new} matrix containing posterior samples of the predicted probability 
 #' (or the linear predictor of logit probability, if \code{transform == FALSE}) of PSM. 
+#' \item{\code{gradient}} An \code{iter x N_new x K} array whose \code{[,,k]} panel contains posterior
+#' samples of the gradient of PSM with respect to the \code{k}-th factor, evaluated at \code{newZ}. 
+#' }
 #' 
 #' @export
 
-sem_psm_predict <- function(fit, data, newsites, newZ = NULL, level = "site", transform = FALSE) 
+sem_psm_predict <- function(fit, data, newsites, newZ = NULL, level = "site", 
+                            transform = FALSE, gradient = FALSE) 
 {
   samples <- extract(fit)
   
-  logit_p_psm <- with(c(data, samples), {
+  with(c(data, samples), {
     
-    intercept <- as.vector(mu_b0) + as.vector(sigma_b0) * b0_std
+    intercept <- as.vector(mu_b0) + as.vector(sigma_b0) * b0_std  # add precip terms #
+    slope <- I0_Z*b0_Z  # add precip terms #
     
     if(is.null(newZ)) {
       logit_p_psm_hat <- intercept[,newsites] + 
-        I0_Z*apply(sweep(Z[,newsites,,drop = FALSE], c(1,3), b0_Z, "*"), c(1,2), sum) # add precip terms #
+        apply(sweep(Z[,newsites,,drop = FALSE], c(1,3), slope, "*"), c(1,2), sum)
     } else {
-      logit_p_psm_hat <- intercept[,newsites] + I0_Z*b0_Z  %*% t(newZ)  # add precip terms #
+      logit_p_psm_hat <- intercept[,newsites] + slope  %*% t(newZ)
     }
     
     if(level == "site")
@@ -47,10 +55,9 @@ sem_psm_predict <- function(fit, data, newsites, newZ = NULL, level = "site", tr
       delta <- array(rnorm(prod(dim(logit_p_psm_hat)), 0, sigma_psm), dim(logit_p_psm_hat))
       logit_p_psm <- logit_p_psm_hat + delta
     }
-    
-    logit_p_psm
+
+    list(est = if(transform) plogis(logit_p_psm) else logit_p_psm,
+         gradient = if(gradient) dPSMdZ else NULL)
   })
-  
-  return(if(transform) plogis(logit_p_psm) else logit_p_psm)
 }
 
