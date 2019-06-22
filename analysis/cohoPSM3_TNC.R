@@ -438,8 +438,11 @@ show_crv <- ifelse(show_site %in% psm_all$site[psm_all$data=="psm"], show_num, s
 
 Z_draws <- extract1(stan_psm_all, "Z")[,,1]
 Z <- colMedians(Z_draws)
-PSM <- colMedians(sem_psm_predict(stan_psm_all, data = stan_dat_all, newsites = 1:stan_dat_all$S, 
-                                  level = prediction_level, transform = TRUE))  # use estimated Z
+cur <- sem_psm_predict(stan_psm_all, data = stan_dat_all, newsites = 1:stan_dat_all$S, 
+                       level = prediction_level, transform = TRUE, gradient = TRUE)  # use estimated Z
+
+PSM <- colMedians(cur$est)
+dPSMdZ <- colMedians(cur$gradient[,,1])
 z_out <- sem_z_crit(stan_psm_all, data = stan_dat_all, psm_crit = psm_crit, 
                     level = prediction_level, alpha = alpha)
 newsites <- rep(sort(unique(c(stan_dat_all$site[stan_dat_all$I_fit==1], show_crv))), each = 50)
@@ -447,9 +450,11 @@ newZ <- matrix(rep(seq(min(Z, z_out$z_crit) - 0.1,
                        max(Z, z_out$z_crit) + 0.1, 
                        length = 50), length(unique(newsites))), ncol = 1)
 psm_pred <- sem_psm_predict(stan_psm_all, data = stan_dat_all, newsites = newsites, newZ = newZ,
-                            level = prediction_level, transform = TRUE)
-psm_pred_show_site <- sem_psm_predict(stan_psm_all, data = stan_dat_all, newsites = show_num,
-                                      newZ = z_out$z_crit[show_num], transform = TRUE)
+                            level = prediction_level, transform = TRUE)$est
+cur_show_site <- sem_psm_predict(stan_psm_all, data = stan_dat_all, newsites = show_num,
+                                 newZ = z_out$z_crit[show_num], transform = TRUE)
+psm_pred_show_site <- cur_show_site$est
+dPSMdZ_show_site <- cur_show_site$gradient
 
 c1 <- transparent("darkgray", 0.3)  # posterior predictive PSM curves, all sites
 c2 <- "gray"  # highlighted site

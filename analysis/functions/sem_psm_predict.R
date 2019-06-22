@@ -46,7 +46,7 @@ sem_psm_predict <- function(fit, data, newsites, newZ = NULL, level = "site",
       logit_p_psm_hat <- intercept[,newsites] + 
         apply(sweep(Z[,newsites,,drop = FALSE], c(1,3), slope, "*"), c(1,2), sum)
     } else {
-      logit_p_psm_hat <- intercept[,newsites] + slope  %*% t(newZ)
+      logit_p_psm_hat <- intercept[,newsites] + tcrossprod(slope, newZ)
     }
     
     if(level == "site")
@@ -55,7 +55,12 @@ sem_psm_predict <- function(fit, data, newsites, newZ = NULL, level = "site",
       delta <- array(rnorm(prod(dim(logit_p_psm_hat)), 0, sigma_psm), dim(logit_p_psm_hat))
       logit_p_psm <- logit_p_psm_hat + delta
     }
-
+    
+    if(gradient) {
+      p_psm <- plogis(logit_p_psm)
+      dPSMdZ <- sweep(array(p_psm * (1 - p_psm), c(dim(p_psm), ncol(slope))), c(1,3), slope, "*")
+    }
+    
     list(est = if(transform) plogis(logit_p_psm) else logit_p_psm,
          gradient = if(gradient) dPSMdZ else NULL)
   })
