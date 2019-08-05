@@ -556,4 +556,15 @@ points(z_out$delta_z, delta_psm, pch = 16, col = dbdzcolst, cex = 1.5)
 if(save_plot) dev.off()
 
 
+#-------------------------------------------------------------------------------------
+# Posterior Predictive Distribution of Landscape Attributes at Critical Urbanization
+#
+# Histogram showing PPD of a selected LU/LC variable for a selected site, given
+# that Z is set to z_crit
+#-------------------------------------------------------------------------------------
+
+
+
+
+
 
