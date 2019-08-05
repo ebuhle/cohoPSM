@@ -439,10 +439,9 @@ show_crv <- ifelse(show_site %in% psm_all$site[psm_all$data=="psm"], show_num, s
 Z_draws <- extract1(stan_psm_all, "Z")[,,1]
 Z <- colMedians(Z_draws)
 cur <- sem_psm_predict(stan_psm_all, data = stan_dat_all, newsites = 1:stan_dat_all$S, 
-                       level = prediction_level, transform = TRUE, gradient = TRUE)  # use estimated Z
+                       level = prediction_level, transform = TRUE)  # use estimated Z
 
 PSM <- colMedians(cur$est)
-dPSMdZ <- colMedians(cur$gradient[,,1])
 z_out <- sem_z_crit(stan_psm_all, data = stan_dat_all, psm_crit = psm_crit, 
                     level = prediction_level, alpha = alpha)
 newsites <- rep(sort(unique(c(stan_dat_all$site[stan_dat_all$I_fit==1], show_crv))), each = 50)
@@ -454,7 +453,6 @@ psm_pred <- sem_psm_predict(stan_psm_all, data = stan_dat_all, newsites = newsit
 cur_show_site <- sem_psm_predict(stan_psm_all, data = stan_dat_all, newsites = show_num,
                                  newZ = z_out$z_crit[show_num], transform = TRUE)
 psm_pred_show_site <- cur_show_site$est
-dPSMdZ_show_site <- cur_show_site$gradient
 
 c1 <- transparent("darkgray", 0.3)  # posterior predictive PSM curves, all sites
 c2 <- "gray"  # highlighted site
@@ -478,7 +476,7 @@ plot(Z, PSM, pch = "", las = 1, cex.axis = 1.2, cex.lab = 1.5,
 for(j in unique(newsites))
   lines(newZ[newsites==j], colMedians(psm_pred[,newsites==j]), col = c1)
 points(Z, PSM, pch = ifelse(psm_all$data=="psm", 16, 1), cex = 1.5, col = dzcolst)
-# selected site: PSM vs. Z curve 
+# selected site: PSM vs. Z curve and gradient 
 polygon(c(newZ[newsites==show_crv], rev(newZ[newsites==show_crv])),
         c(colQuantiles(psm_pred[,newsites==show_crv], probs = 0.05),
           rev(colQuantiles(psm_pred[,newsites==show_crv], probs = 0.95))),
