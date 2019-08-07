@@ -568,15 +568,20 @@ lulc_var <- "nlcd_imperv"
 lulc_num <- which(colnames(stan_dat_all$X) == lulc_var)
 
 lulc_cur_ppd <- sem_lulc_predict(stan_psm_all, data = stan_dat_all, d = lulc_num)
-
 lulc_z_crit_ppd <- sem_lulc_predict(stan_psm_all, data = stan_dat_all, d = lulc_num,
                                     newZ = matrix(z_out$z_crit, ncol = 1))
 ## KLUDGE: Need to back-transform PPD to original data scale,
 ## but transformation depends on selected variable. Since this is
 ## not encoded functionally anywhere (and will be a PITA to encode 
 ## for multi-category composition data), we'll do it on an ad hoc basis for now.
-X_ppd <- lulc_z_crit_ppd$X[,show_num]
-X_obs <- stan_dat_all$X[show_site,lulc_num]
+ss <- lulc_roads_data$nlcd_imperv
+ss[ss==0] <- 1e-4
+ss[ss==1] <- 1 - 1e-4
+ss <- qlogis(ss)
+ss <- scale(ss)
+
+X_ppd <- plogis(attr(ss,"scaled:scale") * (lulc_z_crit_ppd$X[,show_num] + attr(ss,"scaled:center")))
+X_obs <- psm_all[psm_all$site==show_site,lulc_var]
 
 if(save_plot) {
   png(filename=here("analysis","results","figures","lulc_z_crit_ppd.png"),
@@ -586,14 +591,21 @@ if(save_plot) {
 }
 
 par(mar = c(5.1, 4.2, 4.1, 4))
-hmax <- max(hist(X_ppd, 20)$density)
-hist(X_ppd, 20, prob = TRUE, col = "lightgray", border = "white",
-     las = 1, cex.axis = 1.2, cex.lab = 1.5,
-     xlim = range(X_ppd, X_obs), yaxs = "i", ylim = c(0, hmax*1.02),
-     xlab = lulc_roads_labels$plot_label[lulc_roads_labels$data_label == lulc_var],
-     ylab = "Probability", main = "")
+dd <- density(X_ppd)
+plot(dd$x, dd$y, pch = "", las = 1, cex.axis = 1.2, cex.lab = 1.5,
+      xlim = range(X_ppd, X_obs), yaxs = "i", ylim = range(dd$y)*1.02,
+      xlab = lulc_roads_labels$plot_label[lulc_roads_labels$data_label == lulc_var],
+      ylab = "Probability", main = "")
+polygon(c(dd$x, dd$x[1]), c(dd$y, 0), col = "darkgray", border = "darkgray")
+
+# hmax <- max(hist(X_ppd, 20)$density)
+# hist(X_ppd, 20, prob = TRUE, col = "darkgray", border = "white",
+#      las = 1, cex.axis = 1.2, cex.lab = 1.5,
+#      xlim = range(X_ppd, X_obs), yaxs = "i", ylim = c(0, hmax*1.02),
+#      xlab = lulc_roads_labels$plot_label[lulc_roads_labels$data_label == lulc_var],
+#      ylab = "Probability", main = "")
 points(X_obs, 0, pch = 16, cex = 2, xpd = TRUE)
-box()
+# box()
 
 if(save_plot) dev.off()
 
