@@ -32,19 +32,55 @@ salmon <- read.csv(here("data","salmonscape","WA_integrated_Fish_coho_chinook_ch
 ## Step 2: Choices: select the threshold psm and you want to use, and select all IDs or only IDs for which we have PSM data (rather than predicted PSM)
 input <- as.data.frame(NA)
 input$psm_thresh <- 0.25
-predsites <- TRUE #if false, selects out only IDs with PSM calculated from field data, rather than IDs with predicted PSM too
+input$attribute<-"Coho_Presence_m"
+predsites <- TRUE #if false, selects out only IDs with PSM calculated from field data, rather than IDs with predicted PSM
 
 ## Step 3: combine all the data and prep for plotting calculate mean spawner abundance by ID, across years
 ## combined data file with things we want to plot is called "d"
 source(here("analysis","source","prepforplots.R"))
 
-
-#source ("../analysis/source/prepforplots.R")
-
 dim(d)
-## Step 4. Plot Change in Z on x-axis and benefits of interest on the y axis
 
-#dev.new(height=8,width=16)
+## Step 4. Function to plot change in Z on x-axis and attribute of interest on the y axis
+zplotfx <- function(psm_thresh,attribut){
+  Zcrit<-min(d$Z_mean[d$p_psm_mean>psm_thresh], na.rm=TRUE)
+  #Calculate difference between Z_mean and Zcrit (=deltaZ, or the change in Z required to get PSM to 40%)
+  # for all sites and select out just the bad sites
+  d$Zcrit<-Zcrit
+  d$deltaZ<-d$Zcrit-d$Z_mean
+   #add a column for the colors to plot for whether or not site has below threshold psm
+  d$psmshape<-17 
+  d$psmshape[d$p_psm_mean<psm_thresh]<-19
+  attribute<-d[,which(colnames(d)==attribut)]
+  d$attribut_stan<-(attribute-mean(attribute,na.rm=TRUE))/sd(attribute,na.rm=TRUE)
+  dxy<-subset(d,select=c(Z_mean,attribut_stan))
+  score<-as.matrix(dist(rbind(c(Zcrit,max(dxy$attribut_stan,na.rm=TRUE)),dxy), method="euclidean"))[1,-1]
+  dxy<-cbind(d$ID,dxy,d[,which(colnames(d)==attribut)],score)
+  dxy<-dxy[-which(is.na(dxy$attribut_stan)),]
+  dxy<-dxy[order(dxy$score),]
+  myPalette <- colorRampPalette(brewer.pal(9, "RdYlBu")) #### Gives us a heat map look
+  cols = rev(myPalette(length(dxy$score)))
+  dxy<- data.frame(cbind(dxy,cols))
+  colnames(dxy)[1:4]<-c("ID","Z","benefit.stan","benefit")
+  quartz(width = 8, height = 5)
+  plot(dxy$Z,dxy$benefit, cex=1.5,cex.lab=1.2,cex.axis=1.2,xlab="Urbanization", ylab= paste(attribut), type="p", pch=d$psmshape, col=dxy$cols)
+  abline(v=Zcrit+.2, lty=2, lwd=2, col="blue")
+  text(Zcrit,max(dxy$benefit),"zcrit", col= "blue")
+  mtext(side=1,"high",line=4,adj=1,cex=0.8)
+  mtext(side=1,"low",line=4,adj=0,cex=0.8)
+  score_cohopres_m<-dxy
+  legend("topleft", legend=c("Highest priority","Lowest priority"), pch=19,col=c(cols[1],cols[length(cols)]), cex=.8, bty="n")
+  }
+
+
+zplotfx (input$psm_thresh,"Coho_Presence_m")
+
+zplotfx (input$psm_thresh,"nsp_pres")
+zplotfx (input$psm_thresh,"ChinFa_Presence_m")
+
+
+##Below is old code before functionalizing
+ #dev.new(height=8,width=16)
 #pdf(here("analysis","results","figures","benefits_stream_spp_wscheme.pdf"), width = 15, height = 8)
 pdf(here("analysis","results","figures","scheme.pdf"), width = 8, height = 5)
 
@@ -64,7 +100,7 @@ mtext(side=1,"Low Ecological Priority",line=-4,adj=.9,cex=.9)
 dev.off()
 #plot relationship of PSM and Z
 pdf(here("analysis","results","figures","psmvsZ.pdf"), width = 8, height = 5)
-
+quartz()
 plot(psm_pre$Z_mean[1:51],psm_pre$p_psm_mean[1:51],pch=19, col="gray", cex.lab=1.2,cex.axis=1.2,cex=1.52, 
      xlab="Urbanization score (Z)", ylab= "Pre-Spawn Mortality")
 
@@ -90,138 +126,6 @@ dev.off()
 #Give each ID a score
 #standardizing the effort and the benefit, so that they are equally weighted...we can decide if we want to weight things differently.
 
-d$Coho_Pres_stan<-(d$Coho_Presence_m-mean(d$Coho_Presence_m, na.rm=TRUE))/sd(d$Coho_Presence_m, na.rm=TRUE)
-dxy<-subset(d,select=c(Z_mean,Coho_Pres_stan))
-
-score<-as.matrix(dist(rbind(c(Zcrit,max(dxy$Coho_Pres_stan,na.rm=TRUE)),dxy), method="euclidean"))[1,-1]
-
-dxy<-cbind(d$ID,dxy,d$Coho_Presence_m,score)
-dxy<-dxy[-which(is.na(dxy$Coho_Pres_stan)),]
-dxy<-dxy[order(dxy$score),]
-myPalette <- colorRampPalette(brewer.pal(9, "RdYlBu")) #### Gives us a heat map look
-cols = rev(myPalette(length(dxy$score)))
-dxy<- data.frame(cbind(dxy,cols))
-colnames(dxy)[1:4]<-c("ID","Z","benefit.stan","benefit")
-
-pdf(here("analysis","results","figures","cohopres.pdf"), width = 8, height = 5)
-
-plot(dxy$Z,dxy$benefit, cex=1.5,cex.lab=1.2,cex.axis=1.2,xlab="Urbanization", ylab= "Benefit = m stream with coho present", type="p", pch=d$psmshape, col=dxy$cols)
-#text(d$Z_mean, d$Presence..m, labels=as.numeric(as.factor(d$ID)),cex=0.8, font=2)
-#polygon(c(Zcrit,Zcrit,max(dxy$Z, na.rm=TRUE),max(dxy$Z, na.rm=TRUE)),
-#        c(min(dxy$benefit, na.rm=TRUE),max(dxy$benefit, na.rm=TRUE),max(dxy$benefit, na.rm=TRUE),min(dxy$benefit, na.rm=TRUE)),col=adjustcolor("salmon",alpha.f=0.5),
-#        border=NA)
-abline(v=Zcrit, lty=2, lwd=2, col="blue")
-#mtext(side=3,"Restoration",line=-2,adj=1,cex=0.8)
-#mtext(side=3,"Conservation",line=-2,adj=0,cex=0.8)
-mtext(side=1,"high",line=4,adj=1,cex=0.8)
-mtext(side=1,"low",line=4,adj=0,cex=0.8)
-score_cohopres_m<-dxy
-legend("topleft", legend=c("Highest priority","Lowest priority"), pch=19,col=c(cols[1],cols[length(cols)]), cex=.8, bty="n")
-
-dev.off()
-
-dxy<-subset(d,select=c(Z_mean,nsp_pres))
-
-score<-as.matrix(dist(rbind(c(Zcrit,max(dxy$nsp_pres,na.rm=TRUE)),dxy), method="euclidean"))[1,-1]
-
-dxy<-cbind(d$ID,dxy,d$nsp_pres,score)
-dxy<-dxy[-which(is.na(dxy$nsp_pres)),]
-dxy<-dxy[order(dxy$score),]
-myPalette <- colorRampPalette(brewer.pal(9, "RdYlBu")) #### Gives us a heat map look
-cols = rev(myPalette(length(dxy$score)))
-dxy<- data.frame(cbind(dxy,cols))
-colnames(dxy)[1:4]<-c("ID","Z","benefit.stan","benefit")
-
-pdf(here("analysis","results","figures","salmonspp.pdf"), width = 8, height = 5)
-
-plot(dxy$Z,dxy$benefit, cex=1.5,cex.lab=1.2,cex.axis=1.2,xlab="Urbanization", ylab= "Benefit = # salmon species present", type="p", pch=d$psmshape, col=dxy$cols)
-#text(d$Z_mean, d$Presence..m, labels=as.numeric(as.factor(d$ID)),cex=0.8, font=2)
-#polygon(c(Zcrit,Zcrit,max(dxy$Z, na.rm=TRUE),max(dxy$Z, na.rm=TRUE)),
-#        c(min(dxy$benefit, na.rm=TRUE),max(dxy$benefit, na.rm=TRUE),max(dxy$benefit, na.rm=TRUE),min(dxy$benefit, na.rm=TRUE)),col=adjustcolor("salmon",alpha.f=0.5),
-#        border=NA)
-abline(v=Zcrit, lty=2, lwd=2, col="blue")
-#mtext(side=3,"Restoration",line=1,adj=1,cex=0.8)
-#mtext(side=3,"Conservation",line=0,adj=0,cex=0.8)
-mtext(side=1,"high",line=4,adj=1,cex=0.8)
-mtext(side=1,"low",line=4,adj=0,cex=0.8)
-legend(c(2.5,3), legend=c("Highest priority","Lowest priority"), pch=19,col=c(cols[1],cols[length(cols)]), cex=.8, bty="n")
-score_salmonsp<-dxy
-colnames(score_salmonsp)[3:6]<-c("numspp.stan","numspp","score.numsp","cols.numsp")
-scores<-full_join(score_cohopres_m,score_salmonsp)
-dev.off()
-
-#add m of stream with chinook present
-d$ChinFa_Pres_stan<-(d$ChinFa_Presence_m-mean(d$ChinFa_Presence_m, na.rm=TRUE))/sd(d$ChinFa_Presence_m, na.rm=TRUE)
-
-dxy<-subset(d,select=c(Z_mean,ChinFa_Pres_stan))
-
-score<-as.matrix(dist(rbind(c(Zcrit,max(dxy$ChinFa_Pres_stan,na.rm=TRUE)),dxy), method="euclidean"))[1,-1]
-
-dxy<-cbind(d$ID,dxy,d$ChinFa_Presence_m,score)
-dxy<-dxy[-which(is.na(dxy$ChinFa_Pres_stan)),]
-
-dxy<-dxy[order(dxy$score),]
-myPalette <- colorRampPalette(brewer.pal(9, "RdYlBu")) #### Gives us a heat map look
-cols = rev(myPalette(length(dxy$score)))
-
-dxy<- data.frame(cbind(dxy,cols))
-colnames(dxy)[1:4]<-c("ID","Z","benefit.stan","benefit")
-
-pdf(here("analysis","results","figures","chinfapres.pdf"), width = 8, height = 5)
-
-plot(dxy$Z,dxy$benefit, cex=1.5,cex.lab=1.2,cex.axis=1.2,xlab="Urbanization", ylab= "Benefit = m of stream with fall chinook present", type="p", pch=d$psmshape, col=dxy$cols)
-#text(d$Z_mean, d$Presence..m, labels=as.numeric(as.factor(d$ID)),cex=0.8, font=2)
-#polygon(c(Zcrit,Zcrit,max(dxy$Z, na.rm=TRUE),max(dxy$Z, na.rm=TRUE)),
-#        c(min(dxy$benefit, na.rm=TRUE),max(dxy$benefit, na.rm=TRUE),max(dxy$benefit, na.rm=TRUE),min(dxy$benefit, na.rm=TRUE)),col=adjustcolor("salmon",alpha.f=0.5),
-#        border=NA)
-abline(v=Zcrit, lty=2, lwd=2, col="blue")
-#mtext(side=3,"Restoration",line=1,adj=1,cex=0.8)
-#mtext(side=3,"Conservation",line=0,adj=0,cex=0.8)
-mtext(side=1,"high",line=4,adj=1,cex=0.8)
-mtext(side=1,"low",line=4,adj=0,cex=0.8)
-legend("topright", legend=c("Highest priority","Lowest priority"), pch=19,col=c(cols[1],cols[length(cols)]), cex=.8, bty="n")
-
-dev.off()
-
-
-
-score_chinfapres_m<-dxy
-colnames(score_chinfapres_m)[3:6]<-c("chinfapres.stan","chinfa.pres.m","score.chinfa.pres","cols.chinfapres")
-scores<-full_join(scores,score_chinfapres_m)
-colnames(scores)[3:5]<-c("coho.pres.m","coho.pres.stan","score.coho.pres")
-
-
-#add m of stream with chinook present
-d$ChinSp_Pres_stan<-(d$ChinSp_Presence_m-mean(d$ChinSp_Presence_m, na.rm=TRUE))/sd(d$ChinSp_Presence_m, na.rm=TRUE)
-
-dxy<-subset(d,select=c(Z_mean,ChinSp_Pres_stan))
-
-score<-as.matrix(dist(rbind(c(Zcrit,max(dxy$ChinSp_Pres_stan,na.rm=TRUE)),dxy), method="euclidean"))[1,-1]
-
-dxy<-cbind(d$ID,dxy,d$ChinSp_Presence_m,score)
-dxy<-dxy[-which(is.na(dxy$ChinSp_Pres_stan)),]
-
-dxy<-dxy[order(dxy$score),]
-myPalette <- colorRampPalette(brewer.pal(9, "RdYlBu")) #### Gives us a heat map look
-cols = rev(myPalette(length(dxy$score)))
-dxy<- data.frame(cbind(dxy,cols))
-colnames(dxy)[1:4]<-c("ID","Z","benefit.stan","benefit")
-
-pdf(here("analysis","results","figures","chinsppres.pdf"), width = 8, height = 5)
-
-plot(dxy$Z,dxy$benefit, cex=1.5,cex.lab=1.2,cex.axis=1.2,xlab="Urbanization", ylab= "Benefit = m of stream with spring chinook present", type="p", pch=d$psmshape, col=dxy$cols)
-#text(d$Z_mean, d$Presence..m, labels=as.numeric(as.factor(d$ID)),cex=0.8, font=2)
-#polygon(c(Zcrit,Zcrit,max(dxy$Z, na.rm=TRUE),max(dxy$Z, na.rm=TRUE)),
-#        c(min(dxy$benefit, na.rm=TRUE),max(dxy$benefit, na.rm=TRUE),max(dxy$benefit, na.rm=TRUE),min(dxy$benefit, na.rm=TRUE)),col=adjustcolor("salmon",alpha.f=0.5),
-#        border=NA)
-abline(v=Zcrit, lty=2, lwd=2, col="blue")
-#mtext(side=3,"Restoration",line=1,adj=1,cex=0.8)
-#mtext(side=3,"Conservation",line=0,adj=0,cex=0.8)
-mtext(side=1,"high",line=4,adj=1,cex=0.8)
-mtext(side=1,"low",line=4,adj=0,cex=0.8)
-legend("topright", legend=c("Highest priority","Lowest priority"), pch=19,col=c(cols[1],cols[length(cols)]), cex=.8, bty="n")
-
-dev.off()
 
 
 

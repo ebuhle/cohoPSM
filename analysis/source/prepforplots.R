@@ -73,18 +73,3 @@ d<-full_join(d1,salmon, by="ID")
 #A cheap way to get Zcrit associated with threshold PSM. 
 #Need to make this more robust, use model/include full posterior distribution to get error, etc
 
-Zcrit<-min(d$Z_mean[d$p_psm_mean>input$psm_thresh], na.rm=TRUE)
-
-## Calculate difference between Z_mean and Zcrit (=deltaZ, or the change in Z required to get PSM to 40%)
-## for all sites and select out just the bad sites
-d$Zcrit<-Zcrit
-d$deltaZ<-d$Zcrit-d$Z_mean
-
-
-
-#If desired, use pared down psm_pre file, with just named sites (i.e. sites for which PSM was measured rather than predicted from mdoel)
-#if(allsites==FALSE){d<-d[1:51,]}
-#add a column for the colors to plot for whether or not site has below threshold psm
-d$psmshape<-17 
-d$psmshape[d$p_psm_mean<input$psm_thresh]<-19
-
