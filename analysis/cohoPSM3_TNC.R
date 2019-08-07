@@ -25,6 +25,7 @@ source(here("analysis","functions","stan_init.R"))
 source(here("analysis","functions","stan_init_cv.R"))
 source(here("analysis","functions","kfold_partition.R"))
 source(here("analysis","functions","sem_psm_predict.R"))
+source(here("analysis","functions","sem_lulc_predict.R"))
 source(here("analysis","functions","sem_z_crit.R"))
 source(here("analysis","functions","vioplot2.R"))
 
@@ -563,6 +564,35 @@ if(save_plot) dev.off()
 # that Z is set to z_crit
 #-------------------------------------------------------------------------------------
 
+lulc_var <- "nlcd_imperv"
+lulc_num <- which(colnames(stan_dat_all$X) == lulc_var)
+
+lulc_cur_ppd <- sem_lulc_predict(stan_psm_all, data = stan_dat_all, d = lulc_num)
+
+lulc_z_crit_ppd <- sem_lulc_predict(stan_psm_all, data = stan_dat_all, d = lulc_num,
+                                    newZ = matrix(z_out$z_crit, ncol = 1))
+## KLUDGE: Need to back-transform PPD to original data scale,
+## but transformation depends on selected variable. Since this is
+## not encoded functionally anywhere (and will be a PITA to encode 
+## for multi-category composition data), we'll do it on an ad hoc basis for now.
+X_ppd <- lulc_z_crit_ppd$X[,show_num]
+X_obs <- stan_dat_all$X[show_site,lulc_num]
+
+if(save_plot) {
+  png(filename=here("analysis","results","figures","lulc_z_crit_ppd.png"),
+      width=7.5, height=7, units="in", res=300, type="cairo-png") 
+} else {
+  dev.new(width = 7.5, height = 7)
+}
+
+par(mar = c(5.1, 4.2, 4.1, 4))
+hist(X_ppd, 20, prob = TRUE, las = 1, cex.axis = 1.2, cex.lab = 1.5,
+     xlim = range(X_ppd, X_obs),
+     xlab = lulc_roads_labels$plot_label[lulc_roads_labels$data_label == lulc_var],
+     ylab = "Probability", main = "")
+abline(v = X_obs, lwd = 2)
+
+if(save_plot) dev.off()
 
 
 
