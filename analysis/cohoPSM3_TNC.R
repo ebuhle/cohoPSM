@@ -586,11 +586,14 @@ if(save_plot) {
 }
 
 par(mar = c(5.1, 4.2, 4.1, 4))
-hist(X_ppd, 20, prob = TRUE, las = 1, cex.axis = 1.2, cex.lab = 1.5,
-     xlim = range(X_ppd, X_obs),
+hmax <- max(hist(X_ppd, 20)$density)
+hist(X_ppd, 20, prob = TRUE, col = "lightgray", border = "white",
+     las = 1, cex.axis = 1.2, cex.lab = 1.5,
+     xlim = range(X_ppd, X_obs), yaxs = "i", ylim = c(0, hmax*1.02),
      xlab = lulc_roads_labels$plot_label[lulc_roads_labels$data_label == lulc_var],
      ylab = "Probability", main = "")
-abline(v = X_obs, lwd = 2)
+points(X_obs, 0, pch = 16, cex = 2, xpd = TRUE)
+box()
 
 if(save_plot) dev.off()
 
