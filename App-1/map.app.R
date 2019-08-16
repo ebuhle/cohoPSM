@@ -78,11 +78,7 @@ server <- function(input, output,session) {
     Zcrit<-min(d$Z_mean[d$p_psm_mean>input$psm_thresh], na.rm=TRUE)
     #Calculate difference between Z_mean and Zcrit (=deltaZ, or the change in Z required to get PSM to 40%)
     # for all sites and select out just the bad sites
-    d$Zcrit<-Zcrit
-    d$deltaZ<-d$Zcrit-d$Z_mean
     #add a column for the colors to plot for whether or not site has below threshold psm
-    d$psmshape<-17 
-    d$psmshape[d$p_psm_mean<input$psm_thresh]<-19
     attribute<-d[,which(colnames(d)==input$attribute)]
     d$attribut_stan<-(attribute-mean(attribute,na.rm=TRUE))/sd(attribute,na.rm=TRUE)
     dxy<-subset(d,select=c(Z_mean,attribut_stan))
