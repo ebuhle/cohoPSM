@@ -1,3 +1,5 @@
+library(matrixStats)
+library(dplyr)
 library(here)
 
 #==================================================================
@@ -223,7 +225,29 @@ stan_dat_all <- list(S = nrow(X_all),
                      I_fit = as.numeric(psm_all$data=="psm"),
                      I_lpd = rep(0, nrow(psm_all)))
 ## @knitr ignore
+#-----------------------------------------------------------------
+# CONSERVATION ATTRIBUTE DATA FOR TNC PRIORITIZATION ANALYSIS
+#-----------------------------------------------------------------
+## @knitr tnc_prioritization_data
 
+# Species occurrence in WADOE basins from SalmonScape
+salmonscape <- read.csv(here("data","salmonscape","WA_integrated_Fish_coho_chinook_chum_with_WADOE.csv"), 
+                        header = TRUE, skip = 1)
+names(salmonscape)[1] <- "site"
+salmonscape$site <- as.character(salmonscape$site)
+names(salmonscape)[-1] <- tolower(names(salmonscape)[-1])
+names(salmonscape)[-1] <- sapply(strsplit(names(salmonscape)[-1], ".", fixed = TRUE), 
+                                 function(x) paste(c(rev(x), "m"), collapse = "_"))
+salmonscape[is.na(salmonscape)] <- 0  # NA means not present
+
+salmonscape$N_spp <- as.numeric(salmonscape$coho_total_m > 0) +
+  as.numeric(rowAnys(select_at(salmonscape, vars(contains("chin_total"))) > 0)) + 
+  as.numeric(rowAnys(select_at(salmonscape, vars(contains("chum_total"))) > 0))
+
+# 66 WADOE basins in the original analysis are missing from the SalmonScape data.
+# Pad SalmonScape data with NAs for those basins 
+salmonscape <- psm_all %>% select(site) %>% transmute(site = as.character(site)) %>% 
+  left_join(salmonscape)
 
 
 
