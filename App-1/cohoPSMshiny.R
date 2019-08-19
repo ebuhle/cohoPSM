@@ -1,21 +1,40 @@
+#==================================================================
+# SETUP
+#==================================================================
 
-## libraries
-library(here)
 library(dplyr)
-library(RColorBrewer)
-library(colorRamps)
+library(yarrr)
+library(vioplot)
+library(colourvalues)
+library(viridis)
+library(shape)
+library(rstan)
+library(Hmisc)
+library(matrixStats)
+library(here)
 library(leaflet)
 library(rgdal)
-## Step 1:  Read in the data/model estimates- use only predicted attributes for now
-psm_pre <- read.table(here("analysis","results","PSM_predictions.txt"), header=TRUE)
-spawn <- read.csv(here("data","spawner_data.csv"), header=TRUE)
-spatial_pred <- read.csv(here("data","spatial_data_predict.csv"), header=TRUE)
-map_pred<-readOGR(here("data","geospatial","predictions_with_all_GIS_data_Albers.shp"))
-#spatial<- read.csv(here("data","spatial_data.csv"), header=TRUE)
 
-salmon <- read.csv(here("data","salmonscape","WA_integrated_Fish_coho_chinook_chum_with_WADOE.csv"),header=TRUE, skip=1)
+# load functions
+source(here("analysis","functions","stan_mean.R"))
+source(here("analysis","functions","extract1.R"))
+source(here("analysis","functions","sem_psm_predict.R"))
+source(here("analysis","functions","sem_lulc_predict.R"))
+source(here("analysis","functions","sem_z_crit.R"))
+source(here("analysis","functions","vioplot2.R"))
 
-## Step 2: Choices: select the threshold psm and you want to use, and select all IDs or only IDs for which we have PSM data (rather than predicted PSM)
+# read and wrangle data
+source(here("analysis","cohoPSM1_data.R"))  
+
+# read geospatial data/model estimates (use only predicted attributes for now)
+map_pred <- readOGR(here("data","geospatial","predictions_with_all_GIS_data_Albers.shp"))
+
+# load previously saved stanfit objects
+if(file.exists(here("analysis","results","stan_psm_all.RData"))) # full SEM incl WADOE basins
+  load(here("analysis","results","stan_psm_all.RData"))
+
+# Step 2: Choices: select the threshold psm and you want to use, 
+# and select all IDs or only IDs for which we have PSM data (rather than predicted PSM)
 input <- as.data.frame(NA)
 input$psm_thresh <- 0.25
 input$attribute<-"Coho_Presence_m"
@@ -24,43 +43,55 @@ predsites <- TRUE #if false, selects out only IDs with PSM calculated from field
 
 ## Step 3: combine all the data and prep for plotting calculate mean spawner abundance by ID, across years
 ## combined data file with things we want to plot is called "d"
-source(here("analysis","source","prepforplots.R"))
-focalcols<-c("Coho_Presence_m","nsp_pres","ChinFa_Presence_m")
+attrs <- c("coho_presence_m","N_spp","fallchin_presence_m")
 
 ui <- pageWithSidebar(
+  # App title
+  headerPanel("Prioritizing Coho Sites"),
   
-  # App title ----
- headerPanel("Prioritizing Coho Sites"),
-    # Sidebar panel for inputs ----
- sidebarPanel(
-      # Input: Selector for attribute to plot against z ----
-      selectInput(inputId = "attribute", 
-                  label = "Attribute:", 
-                  focalcols,
-                  selected=focalcols[1]),
-      
-      # Input: Slider for selecting critical PSM threshold ----
-      sliderInput(inputId = "psm_thresh",
-                  label = "Pre-Spawn Mortality (PSM) Threshold",
-                  min = 0,
-                  max = 1.0,
-                  value = 0.25)
-      ),
-      
-   
+  # Sidebar panel for inputs
+  sidebarPanel(
+    # Input: slider for critical PSM threshold
+    sliderInput(inputId = "psm_crit",
+                label = "PSM threshold",
+                min = 0,
+                max = 1.0,
+                value = 0.3),
     
-    # Main panel for displaying outputs ----
-    mainPanel(
-      
-      # Output: Plot PSM vs. Z ----
-      plotOutput(outputId = "plot_psm_z"),
-      
-      # Output: Plot selected attribute vs Z
-      plotOutput(outputId = "plot_attribute"),
-      #output: map of sites
-      leafletOutput("mymap",height=1000)
-    )
+    # Input: slider for confidence level
+    sliderInput(inputId = "alpha",
+                label = "Confidence level",
+                min = 0,
+                max = 1,
+                value = 0.9),
+    
+    # Input: selector for attribute to plot against z
+    selectInput(inputId = "attribute", 
+                label = "Attribute", 
+                attrs,
+                selected = attrs[1]),
+    
+    # Input: selector for focal site
+    selectInput(inputId = "show_site",
+                label = "Highlight site",
+                levels(spatial_data_pre$site),
+                selected = levels(spatial_data_pre$site)[1])
+  ),
+  
+  
+  
+  # Main panel for displaying outputs ----
+  mainPanel(
+    
+    # Output: Plot PSM vs. Z ----
+    plotOutput(outputId = "plot_psm_z"),
+    
+    # Output: Plot selected attribute vs Z
+    plotOutput(outputId = "plot_attribute"),
+    #output: map of sites
+    leafletOutput("mymap",height=1000)
   )
+)
 
 
 # Define server logic required to draw a histogram ----
@@ -160,8 +191,8 @@ server <- function(input, output,session) {
     cols = rev(myPalette(length(dxy$score)))
     dxy<- data.frame(cbind(dxy,cols))
     colnames(dxy)[1:4]<-c("ID","Z","benefit.stan","benefit")
-
-        plot(dxy$Z,dxy$benefit, cex=1.5,cex.lab=1.2,cex.axis=1.2,xlab="Urbanization", ylab= paste(input$attribute), type="p", pch=d$psmshape, col=dxy$cols)
+    
+    plot(dxy$Z,dxy$benefit, cex=1.5,cex.lab=1.2,cex.axis=1.2,xlab="Urbanization", ylab= paste(input$attribute), type="p", pch=d$psmshape, col=dxy$cols)
     abline(v=Zcrit+.2, lty=2, lwd=2, col="blue")
     text(Zcrit,max(dxy$benefit),"zcrit", col= "blue")
     mtext(side=1,"high",line=4,adj=1,cex=0.8)
