@@ -21,6 +21,8 @@ library(here)
 library(dplyr)
 library(RColorBrewer)
 library(colorRamps)
+#set_here("/Users/aileneettinger/Documents/GitHub/cohoPSM")
+
 ## Step 1:  Read in the data/model estimates- use only predicted attributes for now
 psm_pre <- read.table(here("analysis","results","PSM_predictions.txt"), header=TRUE)
 spawn <- read.csv(here("data","spawner_data.csv"), header=TRUE)
@@ -43,6 +45,7 @@ dim(d)
 
 ## Step 4. Function to plot change in Z on x-axis and attribute of interest on the y axis
 zplotfx <- function(psm_thresh,attribut){
+  figname<-paste(attribut,psm_thresh,".pdf",sep="_")
   Zcrit<-min(d$Z_mean[d$p_psm_mean>psm_thresh], na.rm=TRUE)
   #Calculate difference between Z_mean and Zcrit (=deltaZ, or the change in Z required to get PSM to 40%)
   # for all sites and select out just the bad sites
@@ -62,41 +65,44 @@ zplotfx <- function(psm_thresh,attribut){
   cols = rev(myPalette(length(dxy$score)))
   dxy<- data.frame(cbind(dxy,cols))
   colnames(dxy)[1:4]<-c("ID","Z","benefit.stan","benefit")
-  quartz(width = 8, height = 5)
-  plot(dxy$Z,dxy$benefit, cex=1.5,cex.lab=1.2,cex.axis=1.2,xlab="Urbanization", ylab= paste(attribut), type="p", pch=d$psmshape, col=dxy$cols)
+  #quartz(width = 8, height = 5)
+  pdf(here("analysis","results","figures",figname))
+  plot(dxy$Z,dxy$benefit, cex=1.5,cex.lab=1.2,cex.axis=1.2,xlab="Urbanization (Z)", ylab= paste(attribut), type="p", pch=d$psmshape, col=dxy$cols)
   abline(v=Zcrit+.2, lty=2, lwd=2, col="blue")
   text(Zcrit,max(dxy$benefit),"zcrit", col= "blue")
   mtext(side=1,"high",line=4,adj=1,cex=0.8)
   mtext(side=1,"low",line=4,adj=0,cex=0.8)
   score_cohopres_m<-dxy
   legend("topleft", legend=c("Highest priority","Lowest priority"), pch=19,col=c(cols[1],cols[length(cols)]), cex=.8, bty="n")
+  dev.off()
   }
 
 
 zplotfx (input$psm_thresh,"Coho_Presence_m")
-
 zplotfx (input$psm_thresh,"nsp_pres")
 zplotfx (input$psm_thresh,"ChinFa_Presence_m")
 
 
-##Below is old code before functionalizing
  #dev.new(height=8,width=16)
 #pdf(here("analysis","results","figures","benefits_stream_spp_wscheme.pdf"), width = 15, height = 8)
 pdf(here("analysis","results","figures","scheme.pdf"), width = 8, height = 5)
-
+psm_thresh<-0.15
+Zcrit<-min(d$Z_mean[d$p_psm_mean>psm_thresh], na.rm=TRUE)
 #quartz(height=7,width=14)
 #par(mfrow=c(2,2))
 #make a blank plot with the prioritization scheme
 plot(psm_pre$Z_mean[1:51],d$p_psm_mean[1:51], pch=19, col="white", yaxt='n',xaxt='n',cex.lab=1.2,cex.axis=1.5,cex=1.52, 
-     xlab="Urbanization", ylab= "Benefit/Biological attribute of interest")
+     xlab="Urbanization (Z)", ylab= "Biological attribute of interest")
 mtext(side=1,"high",line=3,adj=1,cex=0.8)
 mtext(side=1,"low",line=3,adj=0,cex=0.8)
-mtext(side=3,"Restoration",line=-4,adj=.9,cex=.9)
-mtext(side=3,"Conservation",line=-4,adj=.1,cex=.9)
+mtext(side=3,"Restoration Priority",line=-4,adj=.9,cex=.9)
+mtext(side=3,"Conservation Priority",line=-4,adj=.1,cex=.9)
 mtext(side=1,"No action needed",line=-4,adj=.1,cex=.9)
 mtext(side=1,"Low Ecological Priority",line=-4,adj=.9,cex=.9)
+abline(v=Zcrit, lty=2, lwd=2, col="blue")
+text(Zcrit+.04,.02,label="Zcrit", col="blue",cex=1.2)
 
-
+polygon(psm_pre$Z_mean[1:51])
 dev.off()
 #plot relationship of PSM and Z
 pdf(here("analysis","results","figures","psmvsZ.pdf"), width = 8, height = 5)
