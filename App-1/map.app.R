@@ -6,6 +6,8 @@ library(RColorBrewer)
 library(colorRamps)
 library(leaflet)
 library(rgdal)
+options(stringsAsFactors = FALSE)
+
 ## Step 1:  Read in the data/model estimates- use only predicted attributes for now
 psm_pre <- read.table(here("analysis","results","PSM_predictions.txt"), header=TRUE)
 spawn <- read.csv(here("data","spawner_data.csv"), header=TRUE)
