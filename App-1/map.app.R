@@ -6,13 +6,15 @@ library(RColorBrewer)
 library(colorRamps)
 library(leaflet)
 library(rgdal)
+library(sp)
 options(stringsAsFactors = FALSE)
 
 ## Step 1:  Read in the data/model estimates- use only predicted attributes for now
 psm_pre <- read.table(here("analysis","results","PSM_predictions.txt"), header=TRUE)
 spawn <- read.csv(here("data","spawner_data.csv"), header=TRUE)
 spatial_pred <- read.csv(here("data","spatial_data_predict.csv"), header=TRUE)
-map_pred<-readOGR(here("data","geospatial","predictions_with_all_GIS_data_Albers.shp"))
+map_pred<-readOGR(here("data","geospatial","predictions_with_all_GIS_data_Albers.shp", layer=))
+
 #spatial<- read.csv(here("data","spatial_data.csv"), header=TRUE)
 
 salmon <- read.csv(here("data","salmonscape","WA_integrated_Fish_coho_chinook_chum_with_WADOE.csv"),header=TRUE, skip=1)
@@ -74,7 +76,7 @@ server <- function(input, output,session) {
   # This generates plot that:
   #
   # 1. It is "reactive" and therefore should be automatically
-  #    re-executed when inputs (input$bins) change
+  #    re-executed when inputs (input$psm_thresh) change
   # Return the requested dataset ----
   selectedData <- reactive({
     Zcrit<-min(d$Z_mean[d$p_psm_mean>input$psm_thresh], na.rm=TRUE)
@@ -173,9 +175,50 @@ server <- function(input, output,session) {
   })
   
   output$mymap <- renderLeaflet({
-    m<-leaflet(map_pred)%>%
-      addTiles()%>%
-      setView(lng=-120,lat=48,zoom=10)
+     # Add scores to map
+    Zcrit<-min(d$Z_mean[d$p_psm_mean>input$psm_thresh], na.rm=TRUE)
+    #Calculate difference between Z_mean and Zcrit (=deltaZ, or the change in Z required to get PSM to 40%)
+    # for all sites and select out just the bad sites
+    d$Zcrit<-Zcrit
+    d$deltaZ<-d$Zcrit-d$Z_mean
+    #add a column for the colors to plot for whether or not site has below threshold psm
+    Zcrit<-min(d$Z_mean[d$p_psm_mean>input$psm_thresh], na.rm=TRUE)
+    #Calculate difference between Z_mean and Zcrit (=deltaZ, or the change in Z required to get PSM to 40%)
+    # for all sites and select out just the bad sites
+    d$Zcrit<-Zcrit
+    d$deltaZ<-d$Zcrit-d$Z_mean
+    #add a column for the colors to plot for whether or not site has below threshold psm
+    attribute<-d[,which(colnames(d)==input$attribute)]
+    d$attribut_stan<-(attribute-mean(attribute,na.rm=TRUE))/sd(attribute,na.rm=TRUE)
+    dxy<-subset(d,select=c(Z_mean,attribut_stan))
+    score<-as.matrix(dist(rbind(c(Zcrit,max(dxy$attribut_stan,na.rm=TRUE)),dxy), method="euclidean"))[1,-1]
+    dxy<-cbind(d$ID,dxy,d[,which(colnames(d)==input$attribute)],score)
+    dxy<-dxy[-which(is.na(dxy$attribut_stan)),]
+    dxy<-dxy[order(dxy$score),]
+    myPalette <- colorRampPalette(brewer.pal(9, "RdYlBu")) #### Gives us a heat map look
+    cols = rev(myPalette(length(dxy$score)))
+    dxy<- data.frame(cbind(dxy,cols))
+    colnames(dxy)[1:4]<-c("ID","Z","benefit.stan","benefit")
+    dxy<-dxy[order(dxy$ID),]
+    
+    mappred<- merge(map_pred,dxy, by.x="WADOE_ID", by.y="ID")
+    qpal <- colorBin("Reds", map_pred$IMPERV2011, bins=5)
+    map_pred_ll <- spTransform(mappred, CRS("+proj=aea +lat_1=29.5 +lat_2=45.5 +lat_0=23 +lon_0=-96 +x_0=0 +y_0=0 +datum=NAD83 +units=m +no_defs +ellps=GRS80 +towgs84=0,0,0"))
+    
+    # Create leaflet
+     # pal <- colorNumeric(
+      #  palette = "RdYlBu",
+      #  domain = mappred$score # as.numeric(na.omit(x))
+      #)
+      
+      legend.title <- paste(paste0(input$attribute, " ("), round(min(mappred$score, na.rm=T), 2), " - ", round(max(mappred$score, na.rm=T), 2), ")", sep="")
+      
+      leaflet(map_pred_ll) %>%
+        setView(lng = -121, lat = 45, zoom = 6)%>%
+        addTiles()%>%
+        addPolygons(stroke = FALSE, smoothFactor = 0.2, fillOpacity = 0.8, color = ~pal(mappred$score)) %>%
+        addLegend("bottomright", pal = pal, values = ~mappred$score, title = legend.title, labFormat = labelFormat(suffix = ""), opacity = 0.3)
+
   })
   
 }
