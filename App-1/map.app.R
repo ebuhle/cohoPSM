@@ -13,7 +13,7 @@ options(stringsAsFactors = FALSE)
 psm_pre <- read.table(here("analysis","results","PSM_predictions.txt"), header=TRUE)
 spawn <- read.csv(here("data","spawner_data.csv"), header=TRUE)
 spatial_pred <- read.csv(here("data","spatial_data_predict.csv"), header=TRUE)
-map_pred<-readOGR(here("data","geospatial","predictions_with_all_GIS_data_Albers.shp", layer=))
+map_pred<-readOGR(here("data","geospatial","predictions_with_all_GIS_data_Albers.shp"))
 
 #spatial<- read.csv(here("data","spatial_data.csv"), header=TRUE)
 
@@ -206,21 +206,28 @@ server <- function(input, output,session) {
     map_pred_ll <- spTransform(mappred, CRS("+proj=aea +lat_1=29.5 +lat_2=45.5 +lat_0=23 +lon_0=-96 +x_0=0 +y_0=0 +datum=NAD83 +units=m +no_defs +ellps=GRS80 +towgs84=0,0,0"))
     
     # Create leaflet
-     # pal <- colorNumeric(
-      #  palette = "RdYlBu",
-      #  domain = mappred$score # as.numeric(na.omit(x))
-      #)
+      pal <- colorNumeric(
+        palette = "RdYlBu",
+        domain = mappred$score # as.numeric(na.omit(x))
+      )
       
       legend.title <- paste(paste0(input$attribute, " ("), round(min(mappred$score, na.rm=T), 2), " - ", round(max(mappred$score, na.rm=T), 2), ")", sep="")
       
       leaflet(map_pred_ll) %>%
         setView(lng = -121, lat = 45, zoom = 6)%>%
         addTiles()%>%
-        addPolygons(stroke = FALSE, smoothFactor = 0.2, fillOpacity = 0.8, color = ~pal(mappred$score)) %>%
+        addPolygons(data=map_pred_ll,stroke = FALSE, smoothFactor = 0.2, fillOpacity = 0.8, color = ~pal(mappred$score)) %>%
         addLegend("bottomright", pal = pal, values = ~mappred$score, title = legend.title, labFormat = labelFormat(suffix = ""), opacity = 0.3)
-
   })
   
 }
 
 shinyApp(ui = ui, server = server)
+
+
+library(mapview)
+
+## 'leaflet' objects (image above)
+m <- leaflet() %>% addTiles()
+mapshot(m, file = "~/Rplot.png")
+plot(mappred, axes=TRUE, border="gray")
