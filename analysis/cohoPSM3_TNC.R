@@ -429,7 +429,7 @@ save(stan_psm_cv_site_list, stan_psm_cv_site_mods, file = here("analysis","resul
 # Highlight a selected site and show detail
 #----------------------------------------------------------------------
 
-save_plot <- TRUE
+save_plot <- FALSE
 psm_crit <- 0.3   # PSM threshold
 alpha <- 0.9  # credibility level
 prediction_level <- "site"  # "site" or "year"-within-site
@@ -532,7 +532,7 @@ benefit <- "delta_PSM"  # choose variable for y-axis
 if(benefit == "delta_PSM") {
   psm_pred_z_crit <- sem_psm_predict(stan_psm_all, data = stan_dat_all, 
                                      newsites = 1:stan_dat_all$S, newZ = z_out$z_crit, 
-                                     level = prediction_level, transform = TRUE)
+                                     level = prediction_level, transform = TRUE)$est
   delta_psm <- colMedians(psm_pred_z_crit) - PSM
 }
 
