@@ -5,6 +5,7 @@
 options(device = ifelse(.Platform$OS.type == "windows", "windows", "quartz"))
 options(mc.cores = parallel::detectCores(logical = FALSE) - 1)
 library(yarrr)
+library(scales)
 library(vioplot)
 library(colourvalues)
 library(viridis)
@@ -441,7 +442,6 @@ Z_draws <- extract1(stan_psm_all, "Z")[,,1]
 Z <- colMedians(Z_draws)
 cur <- sem_psm_predict(stan_psm_all, data = stan_dat_all, newsites = 1:stan_dat_all$S, 
                        level = prediction_level, transform = TRUE)  # use estimated Z
-
 PSM <- colMedians(cur$est)
 z_out <- sem_z_crit(stan_psm_all, data = stan_dat_all, psm_crit = psm_crit, 
                     level = prediction_level, alpha = alpha)
@@ -520,41 +520,40 @@ if(save_plot) dev.off()
 # Delta z vs. Benefit
 #
 # Plot site-specific delta_z (calculated above) against a selected
-# "benefit" (which may be delta_PSM or some independent attribute
-# of subbasins). Divide plot into "restoration" (delta_z < 0)
+# "objective". Divide plot into "restoration" (delta_z < 0)
 # and "conservation" (delta_z > 0) regions and shade points by
-# (standardized) benefit/delta_z, interpreted either as "return on
+# (standardized) objective/delta_z, interpreted either as "return on
 # investment" (for restoration) or "sensitivity" (for conservation).
 #----------------------------------------------------------------------
 
-benefit <- "delta_PSM"  # choose variable for y-axis
+objective_name <- "coho_total_km"  # choose variable for y-axis
+objective <- salmonscape[salmonscape$data=="pre", objective_name]
+delta_z <- z_out$delta_z[salmonscape$data=="pre"]
 
-if(benefit == "delta_PSM") {
-  psm_pred_z_crit <- sem_psm_predict(stan_psm_all, data = stan_dat_all, 
-                                     newsites = 1:stan_dat_all$S, newZ = z_out$z_crit, 
-                                     level = prediction_level, transform = TRUE)$est
-  delta_psm <- colMedians(psm_pred_z_crit) - PSM
-}
+score <- rescale(objective) / abs(delta_z)
+# score <- sqrt(rescale(objective)^2 + delta_z^2)
+dodzcols <- color_values(score, palette = t(col2rgb(viridis(256))))
+dodzcolst <- transparent(dodzcols, 0.1)
 
-dbdzcols <- color_values(abs(delta_psm)/z_out$delta_z, palette = t(col2rgb(cividis(256, direction = -1))))
-dbdzcolst <- transparent(dzcols, 0.1)
-  
 if(save_plot) {
-  png(filename=here("analysis","results","figures","delta_z_vs_benefit.png"),
-      width=7, height=7, units="in", res=300, type="cairo-png") 
+  png(filename=here("analysis","results","figures","delta_z_vs_objective.png"),
+      width=7.5, height=7, units="in", res=300, type="cairo-png") 
 } else {
-  dev.new(width = 7, height = 7)
+  dev.new(width = 7.5, height = 7)
 }
 
 par(mar = c(5.1, 4.2, 4.1, 4))
 
-plot(z_out$delta_z, delta_psm, pch = "", las = 1, cex.axis = 1.2, cex.lab = 1.5,
-     xlab = expression(Delta * italic(z)), 
-     ylab = ifelse(benefit=="delta_PSM", expression(Delta * "PSM"), benefit))
+plot(delta_z, objective, pch = "", las = 1, cex.axis = 1.2, cex.lab = 1.5,
+     xlab = expression(Delta * italic(z)), ylab = objective_name)
 abline(v = 0)
-points(z_out$delta_z, delta_psm, pch = 16, col = dbdzcolst, cex = 1.5)
-
+points(delta_z, objective, pch = 1, col = dodzcolst, cex = 1.5)
+mtext("Restoration", side = 3, at = min(delta_z, na.rm = TRUE)/2, adj = 0.5, cex = 1.5)
+mtext("Conservation", side = 3, at = max(delta_z, na.rm = TRUE)/2, adj = 0.5, cex = 1.5)
+shape::colorlegend(viridis(100, alpha = 0.9), zlim = round(score),
+                   digit = 0, main = "Score", main.cex = 1.2, posx = c(0.92,0.95))
 if(save_plot) dev.off()
+
 
 
 #-------------------------------------------------------------------------------------
