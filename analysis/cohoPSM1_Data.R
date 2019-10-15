@@ -251,7 +251,7 @@ salmonscape <- psm_all %>% select(c(data, site)) %>% mutate(site = as.character(
   left_join(salmonscape)
 
 # Pretty names for selected variables
-salmonscape_labels <- read.csv(here("data","salmonscape_labels.csv"), header=T)
+salmonscape_labels <- read.csv(here("data","salmonscape_labels.csv"), header=T, stringsAsFactors = FALSE)
 
 
 
