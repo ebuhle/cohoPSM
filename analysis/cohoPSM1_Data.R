@@ -246,7 +246,7 @@ salmonscape$N_spp <- as.numeric(salmonscape$coho_total_m > 0) +
 
 # 66 WADOE basins in the original analysis are missing from the SalmonScape data.
 # Pad SalmonScape data with NAs for those basins 
-salmonscape <- psm_all %>% select(site) %>% transmute(site = as.character(site)) %>% 
+salmonscape <- psm_all %>% select(c(data, site)) %>% mutate(site = as.character(site)) %>% 
   left_join(salmonscape)
 
 
