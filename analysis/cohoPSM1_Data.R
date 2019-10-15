@@ -237,10 +237,11 @@ names(salmonscape)[1] <- "site"
 salmonscape$site <- as.character(salmonscape$site)
 names(salmonscape)[-1] <- tolower(names(salmonscape)[-1])
 names(salmonscape)[-1] <- sapply(strsplit(names(salmonscape)[-1], ".", fixed = TRUE), 
-                                 function(x) paste(c(rev(x), "m"), collapse = "_"))
+                                 function(x) paste(c(rev(x), "km"), collapse = "_"))
 salmonscape[is.na(salmonscape)] <- 0  # NA means not present
+salmonscape[,-1] <- salmonscape[,-1]/1000 # convert m to km
 
-salmonscape$N_spp <- as.numeric(salmonscape$coho_total_m > 0) +
+salmonscape$N_spp <- as.numeric(salmonscape$coho_total_km > 0) +
   as.numeric(rowAnys(select_at(salmonscape, vars(contains("chin_total"))) > 0)) + 
   as.numeric(rowAnys(select_at(salmonscape, vars(contains("chum_total"))) > 0))
 
