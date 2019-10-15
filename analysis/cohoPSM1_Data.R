@@ -250,6 +250,10 @@ salmonscape$N_spp <- as.numeric(salmonscape$coho_total_km > 0) +
 salmonscape <- psm_all %>% select(c(data, site)) %>% mutate(site = as.character(site)) %>% 
   left_join(salmonscape)
 
+# Pretty names for selected variables
+salmonscape_labels <- read.csv(here("data","salmonscape_labels.csv"), header=T)
+
+
 
 
 
