@@ -461,10 +461,10 @@ c2t <- transparent(c2, 0.6)
 dzcols <- color_values(z_out$delta_z, palette = t(col2rgb(cividis(256, direction = -1))))
 dzcolst <- transparent(dzcols, 0.1)
 
-# write out Z and delta_Z estimates and colors for each basin
-write.csv(cbind(data.frame(site = levels(psm_all$site), Z = Z, Z_SE = colSds(Z_draws),
-                         delta_Z = z_out$delta_z, col = dzcols), t(col2rgb(dzcols))),
-          file = "psm_z_threshold_colors.csv", row.names = FALSE)
+# # write out Z and delta_Z estimates and colors for each basin
+# write.csv(cbind(data.frame(site = levels(psm_all$site), Z = Z, Z_SE = colSds(Z_draws),
+#                          delta_Z = z_out$delta_z, col = dzcols), t(col2rgb(dzcols))),
+#           file = here("analysis","results","psm_z_threshold_colors.csv"), row.names = FALSE)
 
 if(save_plot) {
   png(filename=here("analysis","results","figures","psm_z_threshold.png"),
