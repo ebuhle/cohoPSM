@@ -60,6 +60,12 @@ if(predsites==TRUE){
   colnames(goo)[1]<-"ID"
   goo$ID<-as.integer(goo$ID)
   d1<-left_join(goo,spatial_pred)
+  colnames(z)[1]<-"ID"
+  z<-z[52:dim(z)[1],]
+  
+  z$ID<-as.numeric(z$ID)
+  #dim(d1)
+  d1z<-left_join(d1,z)
     }
 
 #merge the salmonscape data with the spatial data
@@ -67,9 +73,5 @@ colnames(salmon)[1]<-"ID"
 salmon$ID<-as.integer(salmon$ID)
 
 ## add in spatial data
-d<-full_join(d1,salmon, by="ID")
-
-#plot(psm_pre$Z.mean,psm_pre$p.psm.mean,)
-#A cheap way to get Zcrit associated with threshold PSM. 
-#Need to make this more robust, use model/include full posterior distribution to get error, etc
+d<-full_join(d1z,salmon, by="ID")
 
