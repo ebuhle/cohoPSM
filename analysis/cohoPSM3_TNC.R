@@ -430,11 +430,11 @@ save(stan_psm_cv_site_list, stan_psm_cv_site_mods, file = here("analysis","resul
 # Highlight a selected site and show detail
 #----------------------------------------------------------------------
 
-save_plot <- FALSE
+save_plot <- TRUE
 psm_crit <- 0.3   # PSM threshold
 alpha <- 0.9  # credibility level
 prediction_level <- "site"  # "site" or "year"-within-site
-show_site <- "400"
+show_site <- "2789"
 show_num <- which(levels(psm_all$site) == show_site)
 show_crv <- ifelse(show_site %in% psm_all$site[psm_all$data=="psm"], show_num, stan_dat_all$S)
 
@@ -482,7 +482,7 @@ plot(Z, PSM, pch = "", las = 1, cex.axis = 1.2, cex.lab = 1.5,
 for(j in unique(newsites))
   lines(newZ[newsites==j], colMedians(psm_pred[,newsites==j]), col = c1)
 points(Z, PSM, pch = ifelse(psm_all$data=="psm", 16, 1), cex = 1.5, col = dzcolst)
-# selected site: PSM vs. Z curve and gradient 
+# selected site: PSM vs. Z curve
 polygon(c(newZ[newsites==show_crv], rev(newZ[newsites==show_crv])),
         c(colQuantiles(psm_pred[,newsites==show_crv], probs = 0.05),
           rev(colQuantiles(psm_pred[,newsites==show_crv], probs = 0.95))),
@@ -497,7 +497,7 @@ text(z_out$z_crit[show_num], par("usr")[3] - 0.03, bquote(italic(z)[crit]), adj 
 # selected site: delta_PSM (change in median PSM risk at z_crit relative to current)
 segments(x0 = z_out$z_crit[show_num], x1 = Z[show_num], y0 = median(psm_pred_show_site), lty = 2)
 arrows(x0 = Z[show_num], y0 = PSM[show_num], y1 = median(psm_pred_show_site), length = 0.1)
-text(Z[show_num] + 0.02, 0.75*PSM[show_num] + 0.25*median(psm_pred_show_site), expression(Delta * "PSM"), adj = 0)
+text(Z[show_num] + 0.02, 0.5*PSM[show_num] + 0.5*median(psm_pred_show_site), expression(Delta * "PSM"), adj = 0)
 # selected site: posterior density of z; delta_z
 vioplot2(Z_draws[,show_num], quantiles = alpha, horizontal = TRUE, at = PSM[show_num],
          add = TRUE, col = NULL, border = "black", lwd = 2, lwd.quantile = 2, wex = 0.05, 
