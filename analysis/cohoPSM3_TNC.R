@@ -540,9 +540,8 @@ for(i in psm_crit_vals)
 
 delta_z_dat <- cbind(delta_z_dat, t(col2rgb(delta_z_dat$col)))
 
-write.csv(cbind(data.frame(site = levels(psm_all$site), Z = Z, Z_SE = colSds(Z_draws),
-                         delta_Z = z_out$delta_z, col = dzcols), t(col2rgb(dzcols))),
-          file = here("analysis","results","psm_z_threshold_colors.csv"), row.names = FALSE)
+write.csv(delta_z_dat,file = here("analysis","results","psm_z_threshold_colors.csv"), 
+          row.names = FALSE)
 
 
 #----------------------------------------------------------------------
@@ -556,11 +555,11 @@ write.csv(cbind(data.frame(site = levels(psm_all$site), Z = Z, Z_SE = colSds(Z_d
 #----------------------------------------------------------------------
 
 objective_name <- "coho_total_km"  # choose variable for y-axis
-objective <- salmonscape[salmonscape$data=="pre", objective_name]
-delta_z <- z_out$delta_z[salmonscape$data=="pre"]
+objective <- salmonscape[!is.na(as.numeric(salmonscape$site)), objective_name]
+delta_z <- z_out$delta_z[!is.na(as.numeric(salmonscape$site))]
 
-score <- log(rescale(objective) / abs(delta_z) + 1)
-# score <- sqrt((max(rescale(objective)) - rescale(objective))^2 + delta_z^2)
+# score <- rescale(objective) / (1 + abs(delta_z))
+score <- sqrt((max(rescale(objective), na.rm = TRUE) - rescale(objective))^2 + delta_z^2)
 dodzcols <- color_values(score, palette = t(col2rgb(viridis(256))))
 dodzcolst <- transparent(dodzcols, 0.1)
 
@@ -579,7 +578,7 @@ plot(delta_z, objective, pch = "", las = 1, cex.axis = 1.2, cex.lab = 1.5,
 abline(v = 0)
 points(delta_z, objective, pch = 1, col = dodzcolst, cex = 1.5)
 mtext("Restoration", side = 3, at = min(delta_z, na.rm = TRUE)/2, adj = 0.5, cex = 1.5)
-mtext("Conservation", side = 3, at = max(delta_z, na.rm = TRUE)/2, adj = 0.5, cex = 1.5)
+mtext("Preservation", side = 3, at = max(delta_z, na.rm = TRUE)/2, adj = 0.5, cex = 1.5)
 shape::colorlegend(viridis(100, alpha = 0.9), zlim = round(range(score, na.rm = TRUE)),
                    digit = 0, main = "Score", main.cex = 1.2, posx = c(0.92,0.95))
 if(save_plot) dev.off()
