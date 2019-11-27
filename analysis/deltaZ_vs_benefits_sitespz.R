@@ -15,13 +15,14 @@
 rm(list=ls()) 
 options(device = ifelse(.Platform$OS.type == "windows", "windows", "quartz"))
 options(stringsAsFactors = FALSE)
+##set working directory
+setwd("~/GitHub/cohoPSM")
 
 ## libraries
 library(here)
 library(dplyr)
 library(RColorBrewer)
 library(colorRamps)
-#set_here("/Users/aileneettinger/Documents/GitHub/cohoPSM")
 
 ## Step 1:  Read in the data/model estimates- use only predicted attributes for now
 psm_pre <- read.table(here("analysis","results","PSM_predictions.txt"), header=TRUE)
@@ -35,7 +36,11 @@ salmon <- read.csv(here("data","salmonscape","WA_integrated_Fish_coho_chinook_ch
 ## Step 2: Choices: select the threshold psm and you want to use, and select all IDs or only IDs for which we have PSM data (rather than predicted PSM)
 input <- as.data.frame(NA)
 input$psm_thresh <-psm_thresh<- 0.3
+alph<-0.95
 input$attribute<-"Coho_Presence_m"
+z<-z[z$psm_crit==psm_thresh,]
+z<-z[z$alpha==alph,]
+
 predsites <- TRUE #if false, selects out only IDs with PSM calculated from field data, rather than IDs with predicted PSM
 
 ## Step 3: combine all the data and prep for plotting calculate mean spawner abundance by ID, across years
@@ -51,7 +56,7 @@ zplotfx <- function(psm_thresh,attribut){
   #Zcrit<-min(d$Z[d$p_psm_mean>psm_thresh], na.rm=TRUE)
   #Calculate difference between Z_mean and Zcrit (=deltaZ, or the change in Z required to get PSM to 40%)
   # for all sites and select out just the bad sites
-  d$Zcrit<-Zcrit
+  #d$Zcrit<-Zcrit
   d$deltaZ<-d$delta_Z
    #add a column for the colors to plot for whether or not site has below threshold psm
   d$psmshape<-17 
@@ -81,12 +86,13 @@ zplotfx <- function(psm_thresh,attribut){
   write.csv(dxy,here("analysis","results",paste(attribut,"scores.csv", sep="_")), row.names = FALSE)
   #legend("topleft", legend=c("Highest priority","Lowest priority"), pch=19,col=c(cols[1],cols[length(cols)]), cex=.8, bty="n")
   dev.off()
+  return(dxy)
   }
 
 
-zplotfx (input$psm_thresh,"Coho_Presence_m")
-zplotfx (input$psm_thresh,"nsp_pres")
-zplotfx (input$psm_thresh,"ChinFa_Presence_m")
+coho<-zplotfx (input$psm_thresh,"Coho_Presence_m")
+nsp<-zplotfx (input$psm_thresh,"nsp_pres")
+chin<-zplotfx (input$psm_thresh,"ChinFa_Presence_m")
 
 
 ##Make a schematic diagram showing our approach 
@@ -133,25 +139,32 @@ mtext(side=1,"low",line=3,adj=0,cex=0.8)
 dev.off()
 
 #write a csv files with all benefits and their scores and color assignments to send to blake
-Coho_Presence_m_scores
+#Coho_Presence_m_scores
 score_chinsppres_m<-read.csv(here("analysis","results","ChinFa_Presence_m_scores.csv"), header=TRUE)
 score_cohosppres_m<-read.csv(here("analysis","results","Coho_Presence_m_scores.csv"), header=TRUE)
 score_nsp<-read.csv(here("analysis","results","nsp_pres_scores.csv"), header=TRUE)
 
-head(score_chinsppres_m)
-head(score_nsp)
-head(score_cohosppres_m)
-score_chinsppres_m<-dxy
-colnames(score_chinsppres_m)[3:6]<-c("chinsppres.stan","chinsp.pres.m","score.chinsp.pres","cols.chinsppres")
-colnames(score_cohosppres_m)[3:6]<-c("coho.pres.m","coho.pres.stan","score.coho.pres","cols.cohosppres")
+colnames(score_chinsppres_m)[3:6]<-c("chinpres.stan","chin.pres.m","score.chin.pres","cols.chin.pres")
+colnames(score_cohosppres_m)[3:6]<-c("coho.pres.stan","coho.pres.m","score.coho.pres","cols.coho.pres")
+colnames(score_nsp)[3:6]<-c("numspp.stan","numspp","score.numspp","cols.numspp")
 
 scores<-full_join(score_cohosppres_m,score_chinsppres_m)
-colnames(scores)[3:5]<-c("coho.pres.m","coho.pres.stan","score.coho.pres")
 
+scores2<-full_join(scores,score_nsp)
+
+znames<-subset(psm_pre, select=c(site,Z_mean, Z_se, p_psm_mean))
+colnames(znames)[1]<-"ID"
+znames<-znames[52:dim(znames)[1],]
+znames$ID<-as.integer(znames$ID)
+zsub<-subset(z,select=c(ID,psm_crit,alpha,Z,Z_SE,delta_Z))
+znames2<-full_join(zsub,znames)
+scores3<-full_join(scores2,znames2)
 
 #fix it up for Blake: remove "NAs" and replace with -9999 and remove colums that we don't care about
-scores_forblake<-subset(scores,select=c(ID,Z,coho.pres.m,score.coho.pres,chinfa.pres.m,score.chinfa.pres,chinsp.pres.m,score.chinsp.pres,numspp,score.numsp))
+scores_forblake<-subset(scores3,select=c(ID,Z,Z_SE,psm_crit,alpha,coho.pres.m,score.coho.pres,cols.coho.pres,chin.pres.m,score.chin.pres,cols.chin.pres,numspp,score.numspp,cols.numspp))
 scores_forblake[is.na(scores_forblake)]<-"-9999"
 
 write.csv(scores_forblake,file=here("analysis","results","scores.csv"), row.names = FALSE)
 
+plot(scores3$coho.pres.stan,scores3$chinpres.stan)
+plot(scores3$coho.pres.stan,scores3$numspp.stan)
