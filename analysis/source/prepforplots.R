@@ -62,9 +62,7 @@ if(predsites==TRUE){
   d1<-left_join(goo,spatial_pred)
   colnames(z)[1]<-"ID"
   z<-z[52:dim(z)[1],]
-  
-  z$ID<-as.numeric(z$ID)
-  #dim(d1)
+  z$ID<-as.integer(z$ID)
   d1z<-left_join(d1,z)
     }
 
@@ -73,5 +71,5 @@ colnames(salmon)[1]<-"ID"
 salmon$ID<-as.integer(salmon$ID)
 
 ## add in spatial data
-d<-full_join(d1z,salmon, by="ID")
+d<-left_join(d1z,salmon, by="ID")
 

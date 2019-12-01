@@ -430,7 +430,7 @@ save(stan_psm_cv_site_list, stan_psm_cv_site_mods, file = here("analysis","resul
 # Highlight a selected site and show detail
 #----------------------------------------------------------------------
 
-save_plot <- TRUE
+save_plot <- FALSE
 psm_crit <- 0.3   # PSM threshold
 alpha <- 0.9  # credibility level
 prediction_level <- "site"  # "site" or "year"-within-site
@@ -460,11 +460,6 @@ c2 <- "gray"  # highlighted site
 c2t <- transparent(c2, 0.6)
 dzcols <- color_values(z_out$delta_z, palette = t(col2rgb(cividis(256, direction = -1))))
 dzcolst <- transparent(dzcols, 0.1)
-
-# # write out Z and delta_Z estimates and colors for each basin
-# write.csv(cbind(data.frame(site = levels(psm_all$site), Z = Z, Z_SE = colSds(Z_draws),
-#                          delta_Z = z_out$delta_z, col = dzcols), t(col2rgb(dzcols))),
-#           file = here("analysis","results","psm_z_threshold_colors.csv"), row.names = FALSE)
 
 if(save_plot) {
   png(filename=here("analysis","results","figures","psm_z_threshold.png"),
@@ -522,6 +517,34 @@ if(save_plot) dev.off()
 
 
 #----------------------------------------------------------------------
+# Recalculate delta_Z for a range of psm_crit and alpha
+# Write out Z and delta_Z estimates and colors for each basin
+#----------------------------------------------------------------------
+
+psm_crit_vals <- c(0.2,0.3,0.4)
+alpha_vals <- c(0.8,0.9,0.95)
+
+delta_z_dat <- expand.grid(site = levels(psm_all$site), psm_crit = psm_crit_vals, 
+                           alpha = alpha_vals)
+delta_z_dat <- data.frame(delta_z_dat, Z = Z, Z_SE = colSds(Z_draws))
+
+for(i in psm_crit_vals)
+  for(j in alpha_vals) 
+  {
+    dz <- sem_z_crit(stan_psm_all, data = stan_dat_all, psm_crit = i, 
+                     level = "site", alpha = j)$delta_z
+    dzc <- color_values(dz, palette = t(col2rgb(cividis(256, direction = -1))))
+    delta_z_dat$delta_Z[delta_z_dat$psm_crit==i & delta_z_dat$alpha==j] <- dz
+    delta_z_dat$col[delta_z_dat$psm_crit==i & delta_z_dat$alpha==j] <- dzc
+  }
+
+delta_z_dat <- cbind(delta_z_dat, t(col2rgb(delta_z_dat$col)))
+
+write.csv(delta_z_dat,file = here("analysis","results","psm_z_threshold_colors.csv"), 
+          row.names = FALSE)
+
+
+#----------------------------------------------------------------------
 # Delta z vs. Benefit
 #
 # Plot site-specific delta_z (calculated above) against a selected
@@ -532,11 +555,11 @@ if(save_plot) dev.off()
 #----------------------------------------------------------------------
 
 objective_name <- "coho_total_km"  # choose variable for y-axis
-objective <- salmonscape[salmonscape$data=="pre", objective_name]
-delta_z <- z_out$delta_z[salmonscape$data=="pre"]
+objective <- salmonscape[!is.na(as.numeric(salmonscape$site)), objective_name]
+delta_z <- z_out$delta_z[!is.na(as.numeric(salmonscape$site))]
 
-score <- log(rescale(objective) / abs(delta_z) + 1)
-# score <- sqrt((max(rescale(objective)) - rescale(objective))^2 + delta_z^2)
+# score <- rescale(objective) / (1 + abs(delta_z))
+score <- sqrt((max(rescale(objective), na.rm = TRUE) - rescale(objective))^2 + delta_z^2)
 dodzcols <- color_values(score, palette = t(col2rgb(viridis(256))))
 dodzcolst <- transparent(dodzcols, 0.1)
 
@@ -555,7 +578,7 @@ plot(delta_z, objective, pch = "", las = 1, cex.axis = 1.2, cex.lab = 1.5,
 abline(v = 0)
 points(delta_z, objective, pch = 1, col = dodzcolst, cex = 1.5)
 mtext("Restoration", side = 3, at = min(delta_z, na.rm = TRUE)/2, adj = 0.5, cex = 1.5)
-mtext("Conservation", side = 3, at = max(delta_z, na.rm = TRUE)/2, adj = 0.5, cex = 1.5)
+mtext("Preservation", side = 3, at = max(delta_z, na.rm = TRUE)/2, adj = 0.5, cex = 1.5)
 shape::colorlegend(viridis(100, alpha = 0.9), zlim = round(range(score, na.rm = TRUE)),
                    digit = 0, main = "Score", main.cex = 1.2, posx = c(0.92,0.95))
 if(save_plot) dev.off()
