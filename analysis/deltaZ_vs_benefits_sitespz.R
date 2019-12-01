@@ -67,7 +67,7 @@ zplotfx <- function(psm_thresh,attribut){
   consPalette <- colorRampPalette(brewer.pal(9, "Greens")) #### Gives us a heat map look
   dxy$cols<-NA
   dxy$cols[which(dxy$delta_Z<0)]<-rev(restPalette(length(dxy$score[which(dxy$delta_Z<=0)])))
-  dxy$cols[which(dxy$delta_Z>0)] <- rev(consPalette(length(dxy$score[which(dxy$delta_Z>0)])))
+  dxy$cols[which(dxy$delta_Z>0)]<-rev(consPalette(length(dxy$score[which(dxy$delta_Z>0)])))
   
   #dxy<- data.frame(cbind(dxy,cols))
   colnames(dxy)[1:4]<-c("ID","delta_Z","benefit.stan","benefit")
@@ -155,3 +155,6 @@ scores_forblake[is.na(scores_forblake)]<-"-9999"
 
 write.csv(scores_forblake,file=here("analysis","results","scores.csv"), row.names = FALSE)
 
+head(scores_forblake)
+quartz()
+plot(scores_forblake$score.coho.pres,scores_forblake$score.nsp, type= "p", pch=21,xlab="Coho score",ylab="Number of species score")
