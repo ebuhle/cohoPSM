@@ -139,20 +139,21 @@ mtext(side=1,"low",line=3,adj=0,cex=0.8)
 dev.off()
 #plot modelled relationship of PSM and Z 
 pdf(here("analysis","results","figures","predpsmvsZ.pdf"), width = 8, height = 5)
-quartz()
+#quartz()
 predpsm<-psm_pre[52:dim(psm_pre)[1],]
 predpsm<-predpsm[order(predpsm$Z_mean),]
+predpsm<-predpsm[c(TRUE,rep(FALSE,60)), ]
 plot(predpsm$Z_mean,predpsm$p_psm_mean,type="l", col="black", lwd=2, cex.lab=1.2,cex.axis=1.2,cex=1.52, 
      xlab="Urbanization", ylab= "Pre-Spawn Mortality")
 
-abline(h=input$psm_thresh, lty=2, lwd=2)
-text(min(d$Z_mean, na.rm=TRUE)+1,input$psm_thresh+.02,label="PSM threshold", cex=1.2)
+abline(h=input$psm_thresh, lty=2, lwd=2, col="red")
+text(min(d$Z_mean, na.rm=TRUE)+1,input$psm_thresh+.02,label="PSM threshold", cex=1.2, col= "red")
 abline(v=Zcrit, lty=2, lwd=2, col="blue")
 #text(psm_pre3$p.psm.mean, psm_pre3$Z.mean, labels=as.numeric(as.factor(psm_pre3$ID)),cex=0.8, font=2)
 # polygon(c(Zcrit,Zcrit,max(d$Z_mean, na.rm=TRUE)+.5,max(d$Z_mean, na.rm=TRUE)+.5),c(input$psm_thresh,1,1,input$psm_thresh),
 #         col=adjustcolor("salmon",alpha.f=0.5),
 #         border=NA)
-text(Zcrit+.04,.02,label="Zcrit", col="blue",cex=1.2)
+text(Zcrit+.04,.02,label="urbanization threshold", col="blue",cex=1.2)
 mtext(side=1,"high",line=3,adj=1,cex=0.8)
 mtext(side=1,"low",line=3,adj=0,cex=0.8)
 #mtext(side=3,"Restoration",line=0,adj=1,cex=0.8)
