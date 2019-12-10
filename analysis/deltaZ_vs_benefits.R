@@ -8,7 +8,7 @@
 ## 4. Number of ESA-protected stocks
 ## 5. Number of people living 1ithin 1 km of the stream
 ## Started by Ailene 1 May 2019
-## ailene.ettinger@noaa.gov
+## ailene.ettinger@tnc.org
 #################################################################
 #################################################################
 ## housekeeping
@@ -83,7 +83,8 @@ zplotfx (input$psm_thresh,"nsp_pres")
 zplotfx (input$psm_thresh,"ChinFa_Presence_m")
 
 
- #dev.new(height=8,width=16)
+##Make a schematic diagram showing our approach 
+#dev.new(height=8,width=16)
 #pdf(here("analysis","results","figures","benefits_stream_spp_wscheme.pdf"), width = 15, height = 8)
 pdf(here("analysis","results","figures","scheme.pdf"), width = 8, height = 5)
 psm_thresh<-0.15
@@ -124,13 +125,6 @@ mtext(side=1,"low",line=3,adj=0,cex=0.8)
 #mtext(side=3,"Conservation",line=0,adj=0,cex=0.8)
 
 dev.off()
-
-#Plot meters of coho spawning and number of species present, number of species spawning
-#quartz()
-#par(mfrow=c(1,2))
-#plot meters of stream with coho present
-#Give each ID a score
-#standardizing the effort and the benefit, so that they are equally weighted...we can decide if we want to weight things differently.
 
 
 

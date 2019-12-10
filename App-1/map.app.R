@@ -118,7 +118,7 @@ server <- function(input, output,session) {
     ## for all sites and select out just the bad sites
     #plot(dsubs$p_psm_mean, dsubs$Z_mean, pch=d$shape,cex.lab=1.2,cex.axis=1.2,cex=2, ylab="Urbanization effects (Z)", xlab= "Mean Pre-Spawn Mortality")
     plot(d$Z_mean,d$p_psm_mean,pch=d$psmshape, col=d$psmcol, bg=d$psmbg,cex.lab=1.2,cex.axis=1.2,cex=1.52, ylim=c(0,1),
-         xlab="Urbanization score (Z)", ylab= "Pre-Spawn Mortality")
+         xlab="Urbanization", ylab= "Pre-Spawn Mortality")
     abline(h=input$psm_thresh, lty=2, lwd=2)
     text(min(d$Z_mean, na.rm=TRUE)+1,input$psm_thresh+.02,label="PSM threshold", cex=1.2)
     abline(v=Zcrit, lty=2, lwd=2, col="blue")
@@ -127,7 +127,7 @@ server <- function(input, output,session) {
             col=adjustcolor("salmon",alpha.f=0.5),
             border=NA)
     
-    text(.02,Zcrit+.04,label="Zcrit", col="blue",cex=1.2)
+    text(.02,Zcrit+.04,label="Urbanization threshold", col="blue",cex=1.2)
     legend("topleft", legend=c("Above threshold","Below threshold"), pch=c(24,19),bg=c("gray",NA),col=c("black","gray"), cex=.8, bty="n")
     
   })
@@ -167,7 +167,7 @@ server <- function(input, output,session) {
 
         plot(dxy$Z,dxy$benefit, cex=1.5,cex.lab=1.2,cex.axis=1.2,xlab="Urbanization", ylab= paste(input$attribute), type="p", pch=d$psmshape, col=dxy$cols)
     abline(v=Zcrit+.2, lty=2, lwd=2, col="blue")
-    text(Zcrit,max(dxy$benefit),"zcrit", col= "blue")
+    text(Zcrit,max(dxy$benefit),"Urbanization threshold", col= "blue")
     mtext(side=1,"high",line=4,adj=1,cex=0.8)
     mtext(side=1,"low",line=4,adj=0,cex=0.8)
     score_cohopres_m<-dxy
@@ -231,3 +231,4 @@ library(mapview)
 m <- leaflet() %>% addTiles()
 mapshot(m, file = "~/Rplot.png")
 plot(mappred, axes=TRUE, border="gray")
+

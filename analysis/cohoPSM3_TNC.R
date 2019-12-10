@@ -28,6 +28,7 @@ source(here("analysis","functions","sem_psm_predict.R"))
 source(here("analysis","functions","sem_lulc_predict.R"))
 source(here("analysis","functions","sem_z_crit.R"))
 source(here("analysis","functions","vioplot2.R"))
+source(here("analysis","functions","get_LL_glmm_psm.R"))
 
 # read and wrangle data
 source(here("analysis","cohoPSM1_data.R"))  
@@ -312,7 +313,7 @@ compare(loo_psm$SEM_full, loo_psm$GLMM)
 #---------------------------------------------------------------------
 
 # Randomly partition sites into groups
-partitions <- kfold_partition(psm_dat = psm, K = 10)
+partitions <- KfoldCV_partition(psm_dat = psm, K = 10)
 partitions  # check that the procedure found a "good" partition (roughly equal group sizes)
 site_group <- partitions$group
 

@@ -1,5 +1,13 @@
-\begin{thebibliography}{1}
+\begin{thebibliography}{6}
 \providecommand{\natexlab}[1]{#1}
+
+\bibitem[{Carwardine et~al.(2009)Carwardine, Klein, Wilson, Pressey, and
+  Possingham}]{carwardine2009}
+Carwardine, J., C.~J. Klein, K.~A. Wilson, R.~L. Pressey, and H.~P. Possingham.
+  2009.
+\newblock Hitting the target and missing the point: target-based conservation
+  planning in context.
+\newblock Conservation Letters 2:4--11.
 
 \bibitem[{Feist et~al.(2017)Feist, Buhle, Baldwin, Spromberg, Damm, Davis, and
   Scholz}]{feist2017}
@@ -8,5 +16,32 @@ Feist, B.~E., E.~R. Buhle, D.~H. Baldwin, J.~A. Spromberg, S.~E. Damm, J.~W.
 \newblock Roads to ruin: conservation threats to a sentinel species across an
   urban gradient.
 \newblock Ecological applications 27:2382--2396.
+
+\bibitem[{Game et~al.(2013)Game, Kareiva, and Possingham}]{game2013}
+Game, E.~T., P.~Kareiva, and H.~P. Possingham. 2013.
+\newblock Six common mistakes in conservation priority setting.
+\newblock Conservation Biology 27:480--485.
+
+\bibitem[{Moilanen et~al.(2011)Moilanen, Anderson, Eigenbrod, Heinemeyer, Roy,
+  Gillings, Armsworth, Gaston, and Thomas}]{moilanen2011}
+Moilanen, A., B.~J. Anderson, F.~Eigenbrod, A.~Heinemeyer, D.~B. Roy,
+  S.~Gillings, P.~R. Armsworth, K.~J. Gaston, and C.~D. Thomas. 2011.
+\newblock Balancing alternative land uses in conservation prioritization.
+\newblock Ecological Applications 21:1419--1426.
+
+\bibitem[{Spromberg et~al.(2016)Spromberg, Baldwin, Damm, McIntyre, Huff,
+  Sloan, Anulacion, Davis, and Scholz}]{spromberg2016}
+Spromberg, J.~A., D.~H. Baldwin, S.~E. Damm, J.~K. McIntyre, M.~Huff, C.~A.
+  Sloan, B.~F. Anulacion, J.~W. Davis, and N.~L. Scholz. 2016.
+\newblock Coho salmon spawner mortality in western us urban watersheds:
+  bioinfiltration prevents lethal storm water impacts.
+\newblock Journal of Applied Ecology 53:398--407.
+
+\bibitem[{Spromberg and Scholz(2011)}]{spromberg2011}
+Spromberg, J.~A., and N.~L. Scholz. 2011.
+\newblock Estimating the future decline of wild coho salmon populations
+  resulting from early spawner die-offs in urbanizing watersheds of the pacific
+  northwest, usa.
+\newblock Integrated Environmental Assessment and Management 7:648--656.
 
 \end{thebibliography}
