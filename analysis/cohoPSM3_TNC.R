@@ -7,6 +7,7 @@ options(mc.cores = parallel::detectCores(logical = FALSE) - 1)
 library(yarrr)
 library(scales)
 library(vioplot)
+if(!require(colourvalues)) devtools::install_github("SymbolixAU/colourvalues")
 library(colourvalues)
 library(viridis)
 library(shape)
@@ -460,7 +461,7 @@ psm_pred_show_site <- cur_show_site$est
 c1 <- transparent("darkgray", 0.3)  # posterior predictive PSM curves, all sites
 c2 <- "gray"  # highlighted site
 c2t <- transparent(c2, 0.6)
-dzcols <- color_values(z_out$delta_z, palette = t(col2rgb(cividis(256, direction = -1))))
+dzcols <- color_values(tmp, palette = get_palette("cividis")[256:1,])
 dzcolst <- transparent(dzcols, 0.1)
 
 if(save_plot) {
@@ -559,12 +560,12 @@ psm_pred_show_site <- cur_show_site$est
 c1 <- transparent("darkgray", 0.3)  # posterior predictive PSM curves, all sites
 c2 <- "gray"  # highlighted site
 c2t <- transparent(c2, 0.8)
-dzcols <- color_values(z_out$delta_z, palette = t(col2rgb(cividis(256, direction = -1))))
+dzcols <- color_values(z_out$delta_z, palette = get_palette("cividis")[256:1,])
 dzcolst <- transparent(dzcols, 0.1)
 
 if(save_plot) {
   png(filename=here("analysis","results","figures","psm_z_threshold_multipanel.png"),
-      width=15, height=5, units="in", res=300, type="cairo-png") 
+      width=15*0.9, height=5*0.9, units="in", res=300, type="cairo-png") 
 } else {
   dev.new(width = 15, height = 5)
 }
