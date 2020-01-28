@@ -667,7 +667,7 @@ for(i in psm_crit_vals)
   {
     dz <- sem_z_crit(stan_psm_all, data = stan_dat_all, psm_crit = i, 
                      level = "site", alpha = j)$delta_z
-    dzc <- color_values(dz, palette = t(col2rgb(cividis(256, direction = -1))))
+    dzc <- color_values(dz, palette = get_palette("cividis")[256:1,])
     delta_z_dat$delta_Z[delta_z_dat$psm_crit==i & delta_z_dat$alpha==j] <- dz
     delta_z_dat$col[delta_z_dat$psm_crit==i & delta_z_dat$alpha==j] <- dzc
   }
@@ -676,6 +676,48 @@ delta_z_dat <- cbind(delta_z_dat, t(col2rgb(delta_z_dat$col)))
 
 write.csv(delta_z_dat,file = here("analysis","results","psm_z_threshold_colors.csv"), 
           row.names = FALSE)
+
+
+#----------------------------------------------------------------------
+# Surface plot showing delta_z as a function of psm_crit and alpha
+# for a selected site
+#----------------------------------------------------------------------
+
+save_plot <- FALSE
+prediction_level <- "site"  # "site" or "year"-within-site
+show_site <- "2789"
+show_num <- which(levels(psm_all$site) == show_site)
+
+psm_crit_vals <- seq(0.1, 0.5, 0.01)
+alpha_vals <- seq(0.7, 0.99, 0.01)
+
+delta_z_dat <- expand.grid(site = show_site, psm_crit = psm_crit_vals, alpha = alpha_vals)
+delta_z_dat <- data.frame(delta_z_dat, delta_z = NA, col = NA)
+
+for(i in 1:nrow(delta_z_dat))
+{
+  dz <- sem_z_crit(stan_psm_all, data = stan_dat_all, psm_crit = delta_z_dat$psm_crit[i], 
+                   level = "site", alpha = delta_z_dat$alpha[i])$delta_z[show_num]
+  dzc <- color_values(dz, palette = get_palette("cividis")[256:1,])
+  delta_z_dat$delta_Z[i] <- dz
+  delta_z_dat$col[i] <- dzc
+}
+
+if(save_plot) {
+  png(filename=here("analysis","results","figures","delta_z_contour.png"),
+      width=7, height=7, units="in", res=300, type="cairo-png") 
+} else {
+  dev.new(width = 7, height = 7)
+}
+
+filled.contour(x = psm_crit_vals, y = alpha_vals, 
+               z = matrix(delta_z_dat$delta_z, length(psm_crit_vals), length(alpha_vals)))
+
+
+
+if(save_plot) dev.off()
+
+
 
 
 #----------------------------------------------------------------------
