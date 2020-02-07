@@ -68,8 +68,8 @@ zplotfx <- function(psm_thresh,attribut){
   dxy<-cbind(d$ID,dxy,d[,which(colnames(d)==attribut)],score)
   dxy<-dxy[-which(is.na(dxy$attribut_stan)),]
   dxy<-dxy[order(dxy$score),]
-  restPalette <- colorRampPalette(brewer.pal(9, "Blues")) #### Gives us a heat map look
-  consPalette <- colorRampPalette(brewer.pal(9, "Greens")) #### Gives us a heat map look
+  restPalette <- colorRampPalette(brewer.pal(9, "Blues"), bias=.5) #### Gives us a heat map look
+  consPalette <- colorRampPalette(brewer.pal(9, "Greens"), bias=.5) #### Gives us a heat map look
   dxy$cols<-NA
   dxy$cols[which(dxy$delta_Z<0)]<-rev(restPalette(length(dxy$score[which(dxy$delta_Z<=0)])))
   dxy$cols[which(dxy$delta_Z>0)]<-rev(consPalette(length(dxy$score[which(dxy$delta_Z>0)])))
