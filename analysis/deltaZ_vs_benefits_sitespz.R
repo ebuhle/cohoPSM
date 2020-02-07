@@ -93,6 +93,18 @@ zplotfx <- function(psm_thresh,attribut){
 coho<-zplotfx (input$psm_thresh,"Coho_Presence_m")
 nsp<-zplotfx (input$psm_thresh,"nsp_pres")
 chin<-zplotfx (input$psm_thresh,"ChinFa_Presence_m")
+coho<-coho %>% distinct()
+nsp<-nsp %>% distinct()
+chin<-chin %>% distinct()
+
+scorename<-paste(alph,psm_thresh,"score.csv",sep="_")
+write.csv(coho,file=here("analysis","results","scores",scorename), row.names = FALSE)
+
+scorenamechin<-paste(alph,psm_thresh,"scorechin.csv",sep="_")
+write.csv(chin,file=here("analysis","results","scores",scorenamechin), row.names = FALSE)
+
+scorenamensp<-paste(alph,psm_thresh,"scorensp.csv",sep="_")
+write.csv(nsp,file=here("analysis","results","scores",scorenamensp), row.names = FALSE)
 
 
 ##Make a schematic diagram showing our approach 
