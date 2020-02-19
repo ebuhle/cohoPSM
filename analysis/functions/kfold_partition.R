@@ -2,7 +2,7 @@
 # Sites are randomly partitioned into K groups that are
 # roughly similar in size (i.e., number of observations).
 
-KfoldCV_partition <- function(psm_dat, K, N_random = 1000)
+kfold_partition <- function(psm_dat, K, N_random = 1000)
 {
   grps <- matrix(NA, length(levels(psm$site)), N_random)
   pos <- 1:nrow(grps)
