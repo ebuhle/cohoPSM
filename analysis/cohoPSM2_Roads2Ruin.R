@@ -82,30 +82,32 @@ for(b0_mod in c(1,"Z"))
 for(i in 1:length(stan_psm_list))
 {
   # Assign binary in/out indicators
-  stan_dat$I0_Z <- as.numeric(substring(names(stan_psm_list)[i],1,1) == "Z")
-  stan_dat$I_su <- as.numeric(substring(names(stan_psm_list)[i],2,2) != "0")
-  stan_dat$I_su_Z <- as.numeric(substring(names(stan_psm_list)[i],2,2) == "Z")
-  stan_dat$I_fa <- as.numeric(substring(names(stan_psm_list)[i],3,3) != "0")
-  stan_dat$I_fa_Z <- as.numeric(substring(names(stan_psm_list)[i],3,3) == "Z")
+  I_list <- list(I0_Z = as.numeric(substring(names(stan_psm_list)[i],1,1) == "Z"),
+                 I_su = as.numeric(substring(names(stan_psm_list)[i],2,2) != "0"),
+                 I_su_Z = as.numeric(substring(names(stan_psm_list)[i],2,2) == "Z"),
+                 I_fa = as.numeric(substring(names(stan_psm_list)[i],3,3) != "0"),
+                 I_fa_Z = as.numeric(substring(names(stan_psm_list)[i],3,3) == "Z"))
   
   # Fit model
   cat("|", rep("*",i), rep(" ", length(stan_psm_list) - i), "| Working on model ", i, "/", 
       length(stan_psm_list), " (see Viewer for progress) \n\n", sep = "")
   
-  fit <- stan(file = here("analysis","stan","cohoPSM_SEM.stan"),
-              data = stan_dat,
-              init = lapply(1:3, function(i) stan_init(stan_dat)),
-              pars = with(stan_dat, {
-                c("a0","A","Z","phi",
-                  "mu_b0", switch(I0_Z,NULL,"b0_Z"), "sigma_b0","b0",
-                  switch(I_su,NULL,"mu_b_su"), switch(I_su_Z,NULL,"b_su_Z"),
-                  switch(I_su,NULL,"sigma_b_su"), switch(I_su,NULL,"b_su"),
-                  switch(I_fa,NULL,"mu_b_fa"), switch(I_fa_Z,NULL,"b_fa_Z"),
-                  switch(I_fa,NULL,"sigma_b_fa"), switch(I_fa,NULL,"b_fa"),
-                  "sigma_psm","p_psm","ll_psm")
-              }),
-              chains = 3, iter = 12000, warmup = 2000, thin = 5,
-              control = list(stepsize = 0.05))
+  fit <- SEMPSM(psm = psm, X = X, L = 1,
+                normal_indx = normal_indx, gamma_indx = gamma_indx,
+                I0_Z = I_list$I0_Z, I_su = I_list$I_su, I_su_Z = I_list$I_su_Z, 
+                I_fa = I_list$I_fa, I_fa_Z = I_list$I_fa_Z,
+                I_fit = rep(1, nrow(psm)), I_lpd = rep(1, nrow(psm)),
+                pars = with(I_list, {
+                  c("a0","A","Z","phi",
+                    "mu_b0", switch(I0_Z,NULL,"b0_Z"), "sigma_b0","b0",
+                    switch(I_su,NULL,"mu_b_su"), switch(I_su_Z,NULL,"b_su_Z"),
+                    switch(I_su,NULL,"sigma_b_su"), switch(I_su,NULL,"b_su"),
+                    switch(I_fa,NULL,"mu_b_fa"), switch(I_fa_Z,NULL,"b_fa_Z"),
+                    switch(I_fa,NULL,"sigma_b_fa"), switch(I_fa,NULL,"b_fa"),
+                    "sigma_psm","p_psm","ll_psm")
+                }),
+                chains = 3, iter = 12000, warmup = 2000, thin = 5,
+                control = list(stepsize = 0.05))
   
   # Store fitted object
   stan_psm_list[[i]] <- list(fit = fit, 
