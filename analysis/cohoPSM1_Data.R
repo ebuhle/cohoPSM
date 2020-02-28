@@ -141,23 +141,26 @@ normal_indx <- grep("ccap|nlcd", colnames(X))
 gamma_indx <- which(!grepl("ccap|nlcd", colnames(X)))
 
 # Data for Stan
-stan_dat <- list(S = nrow(X), 
-                 D_normal = length(normal_indx), D_gamma = length(gamma_indx),
-                 X = X, 
-                 L = 1,  # user-specified!
-                 N = nrow(psm), 
-                 site = as.numeric(psm$site),
-                 ppt_su = array(as.vector(scale(psm$ppt_su/10, scale = FALSE)), dim = nrow(psm)),
-                 ppt_fa = array(as.vector(scale(psm$ppt_fa/10, scale = FALSE)), dim = nrow(psm)),
-                 I0_Z = 1,
-                 I_su = 1,
-                 I_su_Z = 1,
-                 I_fa = 1,
-                 I_fa_Z = 1,
-                 n = psm$n,
-                 n_psm = psm$n_psm,
-                 I_fit = rep(1, nrow(psm)),
-                 I_lpd = rep(1, nrow(psm)))
+stan_dat <- stan_data(psm = psm, X = X, normal_indx = normal_indx, gamma_indx = gamma_indx,
+                      L = 1, I0_Z = 1, I_su = 1, I_su_Z = 1, I_fa = 1, I_fa_Z = 1,
+                      I_fit = rep(1, nrow(psm)), I_lpd = rep(1, nrow(psm)))
+# stan_dat <- list(S = nrow(X), 
+#                  D_normal = length(normal_indx), D_gamma = length(gamma_indx),
+#                  X = X, 
+#                  L = 1,  # user-specified!
+#                  N = nrow(psm), 
+#                  site = as.numeric(psm$site),
+#                  ppt_su = array(as.vector(scale(psm$ppt_su/10, scale = FALSE)), dim = nrow(psm)),
+#                  ppt_fa = array(as.vector(scale(psm$ppt_fa/10, scale = FALSE)), dim = nrow(psm)),
+#                  I0_Z = 1,
+#                  I_su = 1,
+#                  I_su_Z = 1,
+#                  I_fa = 1,
+#                  I_fa_Z = 1,
+#                  n = psm$n,
+#                  n_psm = psm$n_psm,
+#                  I_fit = rep(1, nrow(psm)),
+#                  I_lpd = rep(1, nrow(psm)))
 
 ## @knitr ignore
 #------------------------------------------------------

@@ -4,6 +4,8 @@
 
 options(device = ifelse(.Platform$OS.type == "windows", "windows", "quartz"))
 options(mc.cores = parallel::detectCores(logical = FALSE) - 1)
+if(!require(SEMPSM)) devtools::install_github("ebuhle/SEMPSM")
+library(SEMPSM)
 library(rstan)
 library(loo)
 library(shinystan)
@@ -12,12 +14,12 @@ library(Hmisc)
 library(corrplot)
 library(here)
 
-# load functions
-source(here("analysis","functions","stan_mean.R"))
-source(here("analysis","functions","extract1.R"))
-source(here("analysis","functions","stan_init.R"))
-source(here("analysis","functions","stan_init_cv.R"))
-source(here("analysis","functions","kfold_partition.R"))
+# # load functions
+# source(here("analysis","functions","stan_mean.R"))
+# source(here("analysis","functions","extract1.R"))
+# source(here("analysis","functions","stan_init.R"))
+# source(here("analysis","functions","stan_init_cv.R"))
+# source(here("analysis","functions","kfold_partition.R"))
 
 # read and wrangle data
 source(here("analysis","cohoPSM1_data.R"))  
@@ -44,15 +46,25 @@ if(file.exists(here("analysis","results","stan_psm_all.RData")))
 
 ## @knitr stan_psm_r2r
 # Fit it!
-stan_psm <- stan(file = here("analysis","stan","cohoPSM_SEM.stan"),
-                 data = stan_dat, 
-                 init = lapply(1:3, function(i) stan_init(stan_dat)),
-                 pars = c("a0","A","Z","phi","g_mu_X",
-                          "mu_b0","b0_Z","sigma_b0","b0",
-                          "mu_b_su","b_su_Z","sigma_b_su","b_su",
-                          "mu_b_fa","b_fa_Z","sigma_b_fa","b_fa",
-                          "sigma_psm","p_psm","ll_psm"), 
-                 chains = 3, iter = 12000, warmup = 2000, thin = 5)
+stan_psm <- SEMPSM(psm = psm, X = X, L = 1,
+                   normal_indx = normal_indx, gamma_indx = gamma_indx,
+                   I0_Z = 1, I_su = 1, I_su_Z = 1, I_fa = 1, I_fa_Z = 1,
+                   I_fit = rep(1, nrow(psm)), I_lpd = rep(1, nrow(psm)),
+                   pars = c("a0","A","Z","phi","g_mu_X",
+                            "mu_b0","b0_Z","sigma_b0","b0",
+                            "mu_b_su","b_su_Z","sigma_b_su","b_su",
+                            "mu_b_fa","b_fa_Z","sigma_b_fa","b_fa",
+                            "sigma_psm","p_psm","ll_psm"), 
+                   chains = 3, iter = 12000, warmup = 2000, thin = 5)
+# stan_psm <- stan(file = here("analysis","stan","cohoPSM_SEM.stan"),
+#                  data = stan_dat, 
+#                  init = lapply(1:3, function(i) stan_init(stan_dat)),
+#                  pars = c("a0","A","Z","phi","g_mu_X",
+#                           "mu_b0","b0_Z","sigma_b0","b0",
+#                           "mu_b_su","b_su_Z","sigma_b_su","b_su",
+#                           "mu_b_fa","b_fa_Z","sigma_b_fa","b_fa",
+#                           "sigma_psm","p_psm","ll_psm"), 
+#                  chains = 3, iter = 12000, warmup = 2000, thin = 5)
 
 # Inspect and use shinystan to explore samples
 print(stan_psm, prob = c(0.025, 0.5, 0.975), 
