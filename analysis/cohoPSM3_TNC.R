@@ -4,6 +4,8 @@
 
 options(device = ifelse(.Platform$OS.type == "windows", "windows", "quartz"))
 options(mc.cores = parallel::detectCores(logical = FALSE) - 1)
+if(!require(SEMPSM)) devtools::install_github("ebuhle/SEMPSM")
+library(SEMPSM)
 library(yarrr)
 library(scales)
 library(vioplot)
@@ -19,17 +21,6 @@ library(rstanarm)
 library(Hmisc)
 library(matrixStats)
 library(here)
-
-# load functions
-source(here("analysis","functions","stan_mean.R"))
-source(here("analysis","functions","extract1.R"))
-source(here("analysis","functions","stan_init.R"))
-source(here("analysis","functions","stan_init_cv.R"))
-source(here("analysis","functions","kfold_partition.R"))
-source(here("analysis","functions","sem_psm_predict.R"))
-source(here("analysis","functions","sem_lulc_predict.R"))
-source(here("analysis","functions","sem_z_crit.R"))
-source(here("analysis","functions","vioplot2.R"))
 
 # read and wrangle data
 source(here("analysis","cohoPSM1_data.R"))  
@@ -225,33 +216,19 @@ LL_glmm_psm <- get_LL_glmm_psm(glmm_psm)
 ## @knitr stan_data_psm_roads
 # nonnegative continuous data:
 # scale to SD = 1, bound away from 0
-X <- as.matrix(lulc_roads_data[,c("roads1","roads2","roads4","roads5","traffic")])
-X <- sweep(X, 2, apply(X, 2, sd), "/")
-X[X==0] <- 1e-4
-X <- sweep(X, 2, apply(X, 2, sd), "/")
+X_rt <- as.matrix(lulc_roads_data[,c("roads1","roads2","roads4","roads5","traffic")])
+X_rt <- sweep(X, 2, apply(X_rt, 2, sd), "/")
+X_rt[X==0] <- 1e-4
+X_rt <- sweep(X_rt, 2, apply(X_rt, 2, sd), "/")
 
 # all covariates assumed to be gamma distributed
 normal_indx <- NULL
 gamma_indx <- 1:ncol(X)
 
 # Data for Stan
-stan_dat_rt <- list(S = nrow(X), 
-                    D_normal = length(normal_indx), D_gamma = length(gamma_indx),
-                    X = X, 
-                    L = 1,  # user-specified!
-                    N = nrow(psm), 
-                    site = as.numeric(psm$site),
-                    ppt_su = array(as.vector(scale(psm$ppt_su/10, scale = FALSE)), dim = nrow(psm)),
-                    ppt_fa = array(as.vector(scale(psm$ppt_fa/10, scale = FALSE)), dim = nrow(psm)),
-                    I0_Z = 1,
-                    I_su = 1,
-                    I_su_Z = 1,
-                    I_fa = 1,
-                    I_fa_Z = 1,
-                    n = psm$n,
-                    n_psm = psm$n_psm,
-                    I_fit = rep(1, nrow(psm)),
-                    I_lpd = rep(1, nrow(psm)))
+stan_dat_rt <- stan_data(psm = psm, X = X_rt, normal_indx = normal_indx, gamma_indx = gamma_indx,
+                      L = 1, I0_Z = 1, I_su = 1, I_su_Z = 1, I_fa = 1, I_fa_Z = 1,
+                      I_fit = rep(1, nrow(psm)), I_lpd = rep(1, nrow(psm)))
 ## @knitr ignore
 
 #-------------------------------------------------------------------
@@ -260,15 +237,16 @@ stan_dat_rt <- list(S = nrow(X),
 
 ## @knitr stan_psm_rt
 # Fit it!
-stan_psm_rt <- stan(file = here("analysis","stan","cohoPSM_SEM.stan"),
-                    data = stan_dat_rt, 
-                    init = lapply(1:3, function(i) stan_init(stan_dat_rt)),
-                    pars = c("a0","A","Z","phi","g_mu_X",
-                             "mu_b0","b0_Z","sigma_b0","b0",
-                             "mu_b_su","b_su_Z","sigma_b_su","b_su",
-                             "mu_b_fa","b_fa_Z","sigma_b_fa","b_fa",
-                             "sigma_psm","p_psm","ll_psm"), 
-                    chains = 3, iter = 12000, warmup = 2000, thin = 5)
+stan_psm_rt <- SEMPSM(psm = psm, X = X_rt, L = 1,
+                   normal_indx = normal_indx, gamma_indx = gamma_indx,
+                   I0_Z = 1, I_su = 1, I_su_Z = 1, I_fa = 1, I_fa_Z = 1,
+                   I_fit = rep(1, nrow(psm)), I_lpd = rep(1, nrow(psm)),
+                   pars = c("a0","A","Z","phi","g_mu_X",
+                            "mu_b0","b0_Z","sigma_b0","b0",
+                            "mu_b_su","b_su_Z","sigma_b_su","b_su",
+                            "mu_b_fa","b_fa_Z","sigma_b_fa","b_fa",
+                            "sigma_psm","p_psm","ll_psm"), 
+                   chains = 3, iter = 12000, warmup = 2000, thin = 5)
 
 # Inspect and use shinystan to explore samples
 print(stan_psm_rt, prob = c(0.025, 0.5, 0.975), 
@@ -337,25 +315,19 @@ for(j in sort(unique(site_group)))
   cat("Working on hold-out group ", grep(j, sort(unique(site_group))), "/", 
       length(unique(site_group)), " (see Viewer for progress) \n\n", sep = "")
   
-  # Modify data to be passed to SEMs
-  stan_dat_cv_site <- stan_dat
-  stan_dat_cv_site$I_fit <- as.numeric(site_group != j)  # training data
-  stan_dat_cv_site$I_lpd <- as.numeric(site_group == j)  # hold-out data
-  stan_dat_rt_cv_site <- stan_dat_rt
-  stan_dat_rt_cv_site$I_fit <- as.numeric(site_group != j)  # training data
-  stan_dat_rt_cv_site$I_lpd <- as.numeric(site_group == j)  # hold-out data
-  
   ## Full SEM
   # Fit
-  fit <- stan(file = here("analysis","stan","cohoPSM_SEM.stan"),
-              data = stan_dat_cv_site, 
-              init = lapply(1:3,function(i) stan_init_cv(stan_psm)),
-              pars = c("a0","A","Z","phi","mu_b0","b0_Z","sigma_b0","b0",
-                       "mu_b_su","b_su_Z","sigma_b_su","b_su",
-                       "mu_b_fa","b_fa_Z","sigma_b_fa","b_fa",
-                       "sigma_psm","p_psm","ll_psm"),
-              chains = 3, iter = 12000, warmup = 2000, thin = 5,
-              control = list(stepsize = 0.05))
+  fit <- SEMPSM(psm = psm, X = X, L = 1,
+                normal_indx = normal_indx, gamma_indx = gamma_indx,
+                I0_Z = 1, I_su = 1, I_su_Z = 1, I_fa = 1, I_fa_Z = 1,
+                I_fit = as.numeric(site_group != j),  # training data
+                I_lpd = as.numeric(site_group == j),  # hold-out data
+                pars = c("a0","A","Z","phi","g_mu_X",
+                         "mu_b0","b0_Z","sigma_b0","b0",
+                         "mu_b_su","b_su_Z","sigma_b_su","b_su",
+                         "mu_b_fa","b_fa_Z","sigma_b_fa","b_fa",
+                         "sigma_psm","p_psm","ll_psm"), 
+                chains = 3, iter = 12000, warmup = 2000, thin = 5)
   
   # Store fitted object and log-likelihood matrix
   stan_psm_cv_site_list$SEM_full$fit[[as.character(j)]] <- fit
@@ -363,16 +335,18 @@ for(j in sort(unique(site_group)))
   
   ## Roads + traffic SEM
   # Fit
-  fit <- stan(file = here("analysis","stan","cohoPSM_SEM.stan"),
-              data = stan_dat_rt_cv_site, 
-              init = lapply(1:3,function(i) stan_init_cv(stan_psm_rt)),
-              pars = c("a0","A","Z","phi","mu_b0","b0_Z","sigma_b0","b0",
-                       "mu_b_su","b_su_Z","sigma_b_su","b_su",
-                       "mu_b_fa","b_fa_Z","sigma_b_fa","b_fa",
-                       "sigma_psm","p_psm","ll_psm"),
-              chains = 3, iter = 12000, warmup = 2000, thin = 5,
-              control = list(stepsize = 0.05))
-  
+  fit <- SEMPSM(psm = psm, X = X_rt, L = 1,
+                normal_indx = normal_indx, gamma_indx = gamma_indx,
+                I0_Z = 1, I_su = 1, I_su_Z = 1, I_fa = 1, I_fa_Z = 1,
+                I_fit = as.numeric(site_group != j),  # training data
+                I_lpd = as.numeric(site_group == j),  # hold-out data
+                pars = c("a0","A","Z","phi","g_mu_X",
+                         "mu_b0","b0_Z","sigma_b0","b0",
+                         "mu_b_su","b_su_Z","sigma_b_su","b_su",
+                         "mu_b_fa","b_fa_Z","sigma_b_fa","b_fa",
+                         "sigma_psm","p_psm","ll_psm"), 
+                chains = 3, iter = 12000, warmup = 2000, thin = 5)
+
   # Store fitted object and log-likelihood matrix
   stan_psm_cv_site_list$SEM_rt$fit[[as.character(j)]] <- fit
   stan_psm_cv_site_list$SEM_rt$ll_psm[,site_group == j] <- as.matrix(fit,"ll_psm")

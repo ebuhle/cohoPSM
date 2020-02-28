@@ -166,14 +166,13 @@ for(i in 1:length(stan_psm_cv_year_list))
                                      ll_psm = matrix(NA, 6000, nrow(psm)),
                                      elpd = NULL)
   names(stan_psm_cv_year_list[[i]]$fit) <- sort(unique(psm$year))
-  stan_dat_cv_year <- stan_dat
-  
+
   # Assign binary in/out indicators
-  stan_dat_cv_year$I0_Z <- as.numeric(substring(names(stan_psm_cv_year_list)[i],1,1) == "Z")
-  stan_dat_cv_year$I_su <- as.numeric(substring(names(stan_psm_cv_year_list)[i],2,2) != "0")
-  stan_dat_cv_year$I_su_Z <- as.numeric(substring(names(stan_psm_cv_year_list)[i],2,2) == "Z")
-  stan_dat_cv_year$I_fa <- as.numeric(substring(names(stan_psm_cv_year_list)[i],3,3) != "0")
-  stan_dat_cv_year$I_fa_Z <- as.numeric(substring(names(stan_psm_cv_year_list)[i],3,3) == "Z")
+  I_list <- list(I0_Z = as.numeric(substring(names(stan_psm_cv_year_list)[i],1,1) == "Z"),
+                 I_su = as.numeric(substring(names(stan_psm_cv_year_list)[i],2,2) != "0"),
+                 I_su_Z = as.numeric(substring(names(stan_psm_cv_year_list)[i],2,2) == "Z"),
+                 I_fa = as.numeric(substring(names(stan_psm_cv_year_list)[i],3,3) != "0"),
+                 I_fa_Z = as.numeric(substring(names(stan_psm_cv_year_list)[i],3,3) == "Z"))
   
   for(j in sort(unique(psm$year)))
   {
@@ -184,21 +183,25 @@ for(i in 1:length(stan_psm_cv_year_list))
     cat("Working on model ", i, "/", length(stan_psm_cv_year_list), " and hold-out year ", 
         grep(j, sort(unique(psm$year))), "/", length(unique(psm$year)), 
         " (see Viewer for progress) \n\n", sep = "")
-    fit <- stan(file = here("analysis","stan","cohoPSM_SEM.stan"),
-                data = stan_dat_cv_year, 
-                init = lapply(1:3,function(i) stan_init_cv(stan_psm)),
-                pars = with(stan_dat_cv_year, {
-                  c("a0","A","Z","phi",
-                    "mu_b0", switch(I0_Z,NULL,"b0_Z"), "sigma_b0","b0",
-                    switch(I_su,NULL,"mu_b_su"), switch(I_su_Z,NULL,"b_su_Z"),
-                    switch(I_su,NULL,"sigma_b_su"), switch(I_su,NULL,"b_su"),
-                    switch(I_fa,NULL,"mu_b_fa"), switch(I_fa_Z,NULL,"b_fa_Z"),
-                    switch(I_fa,NULL,"sigma_b_fa"), switch(I_fa,NULL,"b_fa"),
-                    "sigma_psm","p_psm","ll_psm")
-                }), 
-                chains = 3, iter = 12000, warmup = 2000, thin = 5,
-                control = list(stepsize = 0.05))
     
+    fit <- SEMPSM(psm = psm, X = X, L = 1, fit = stan_psm,
+                  normal_indx = normal_indx, gamma_indx = gamma_indx,
+                  I0_Z = I_list$I0_Z, I_su = I_list$I_su, I_su_Z = I_list$I_su_Z, 
+                  I_fa = I_list$I_fa, I_fa_Z = I_list$I_fa_Z,
+                  I_fit = as.numeric(psm$year != j),  # training data,
+                  I_lpd = as.numeric(psm$year == j),  # hold-out data
+                  pars = with(I_list, {
+                    c("a0","A","Z","phi",
+                      "mu_b0", switch(I0_Z,NULL,"b0_Z"), "sigma_b0","b0",
+                      switch(I_su,NULL,"mu_b_su"), switch(I_su_Z,NULL,"b_su_Z"),
+                      switch(I_su,NULL,"sigma_b_su"), switch(I_su,NULL,"b_su"),
+                      switch(I_fa,NULL,"mu_b_fa"), switch(I_fa_Z,NULL,"b_fa_Z"),
+                      switch(I_fa,NULL,"sigma_b_fa"), switch(I_fa,NULL,"b_fa"),
+                      "sigma_psm","p_psm","ll_psm")
+                  }),
+                  chains = 3, iter = 12000, warmup = 2000, thin = 5,
+                  control = list(stepsize = 0.05))
+
     # Store fitted object and log-likelihood matrix
     stan_psm_cv_year_list[[i]]$fit[[as.character(j)]] <- fit
     stan_psm_cv_year_list[[i]]$ll_psm[,psm$year == j] <- as.matrix(fit,"ll_psm")
@@ -261,14 +264,13 @@ for(i in 1:length(stan_psm_cv_site_list))
                                      ll_psm = matrix(NA, 6000, nrow(psm)),
                                      elpd = NULL)
   names(stan_psm_cv_site_list[[i]]$fit) <- sort(unique(site_group))
-  stan_dat_cv_site <- stan_dat
-  
+
   # Assign binary in/out indicators
-  stan_dat_cv_site$I0_Z <- as.numeric(substring(names(stan_psm_cv_site_list)[i],1,1) == "Z")
-  stan_dat_cv_site$I_su <- as.numeric(substring(names(stan_psm_cv_site_list)[i],2,2) != "0")
-  stan_dat_cv_site$I_su_Z <- as.numeric(substring(names(stan_psm_cv_site_list)[i],2,2) == "Z")
-  stan_dat_cv_site$I_fa <- as.numeric(substring(names(stan_psm_cv_site_list)[i],3,3) != "0")
-  stan_dat_cv_site$I_fa_Z <- as.numeric(substring(names(stan_psm_cv_site_list)[i],3,3) == "Z")
+  I_list <- list(I0_Z = as.numeric(substring(names(stan_psm_cv_site_list)[i],1,1) == "Z"),
+                 I_su = as.numeric(substring(names(stan_psm_cv_site_list)[i],2,2) != "0"),
+                 I_su_Z = as.numeric(substring(names(stan_psm_cv_site_list)[i],2,2) == "Z"),
+                 I_fa = as.numeric(substring(names(stan_psm_cv_site_list)[i],3,3) != "0"),
+                 I_fa_Z = as.numeric(substring(names(stan_psm_cv_site_list)[i],3,3) == "Z"))
   
   for(j in sort(unique(site_group)))
   {
@@ -279,21 +281,25 @@ for(i in 1:length(stan_psm_cv_site_list))
     cat("Working on model ", i, "/", length(stan_psm_cv_site_list), " and hold-out group ", 
         grep(j, sort(unique(site_group))), "/", length(unique(site_group)), 
         " (see Viewer for progress) \n\n", sep = "")
-    fit <- stan(file = here("analysis","stan","cohoPSM_SEM.stan"),
-                data = stan_dat_cv_site, 
-                init = lapply(1:3,function(i) stan_init_cv(stan_psm)),
-                pars = with(stan_dat_cv_site, {
-                  c("a0","A","Z","phi",
-                    "mu_b0", switch(I0_Z,NULL,"b0_Z"), "sigma_b0","b0",
-                    switch(I_su,NULL,"mu_b_su"), switch(I_su_Z,NULL,"b_su_Z"),
-                    switch(I_su,NULL,"sigma_b_su"), switch(I_su,NULL,"b_su"),
-                    switch(I_fa,NULL,"mu_b_fa"), switch(I_fa_Z,NULL,"b_fa_Z"),
-                    switch(I_fa,NULL,"sigma_b_fa"), switch(I_fa,NULL,"b_fa"),
-                    "sigma_psm","p_psm","ll_psm")
-                }),
-                chains = 3, iter = 12000, warmup = 2000, thin = 5,
-                control = list(stepsize = 0.05))
     
+    fit <- SEMPSM(psm = psm, X = X, L = 1, fit = stan_psm,
+                  normal_indx = normal_indx, gamma_indx = gamma_indx,
+                  I0_Z = I_list$I0_Z, I_su = I_list$I_su, I_su_Z = I_list$I_su_Z, 
+                  I_fa = I_list$I_fa, I_fa_Z = I_list$I_fa_Z,
+                  I_fit = as.numeric(site_group != j),  # training data,
+                  I_lpd = as.numeric(site_group == j),  # hold-out data
+                  pars = with(stan_dat_cv_site, {
+                    c("a0","A","Z","phi",
+                      "mu_b0", switch(I0_Z,NULL,"b0_Z"), "sigma_b0","b0",
+                      switch(I_su,NULL,"mu_b_su"), switch(I_su_Z,NULL,"b_su_Z"),
+                      switch(I_su,NULL,"sigma_b_su"), switch(I_su,NULL,"b_su"),
+                      switch(I_fa,NULL,"mu_b_fa"), switch(I_fa_Z,NULL,"b_fa_Z"),
+                      switch(I_fa,NULL,"sigma_b_fa"), switch(I_fa,NULL,"b_fa"),
+                      "sigma_psm","p_psm","ll_psm")
+                  }),
+                  chains = 3, iter = 12000, warmup = 2000, thin = 5,
+                  control = list(stepsize = 0.05))
+
     # Store fitted object and log-likelihood matrix
     stan_psm_cv_site_list[[i]]$fit[[as.character(j)]] <- fit
     stan_psm_cv_site_list[[i]]$ll_psm[,site_group == j] <- as.matrix(fit,"ll_psm")
@@ -337,6 +343,17 @@ save(stan_psm_cv_site_list, stan_psm_cv_site_mods, file = here("analysis","resul
 
 ## @knitr stan_psm_all_r2r
 # Fit it!
+stan_psm_all <- SEMPSM(psm = psm, X = X, L = 1,
+                   normal_indx = normal_indx, gamma_indx = gamma_indx,
+                   I0_Z = 1, I_su = 1, I_su_Z = 1, I_fa = 1, I_fa_Z = 1,
+                   I_fit = rep(1, nrow(psm)), I_lpd = rep(1, nrow(psm)),
+                   pars = c("a0","A","Z","phi","g_mu_X",
+                            "mu_b0","b0_Z","sigma_b0","b0",
+                            "mu_b_su","b_su_Z","sigma_b_su","b_su",
+                            "mu_b_fa","b_fa_Z","sigma_b_fa","b_fa",
+                            "sigma_psm","p_psm","ll_psm"), 
+                   chains = 3, iter = 12000, warmup = 2000, thin = 5)
+
 stan_psm_all <- stan(file = here("analysis","stan","cohoPSM_SEM.stan"),
                      data = stan_dat_all, 
                      init = lapply(1:3, function(i) stan_init(stan_dat_all)),

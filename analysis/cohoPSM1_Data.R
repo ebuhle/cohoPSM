@@ -1,3 +1,5 @@
+if(!require(SEMPSM)) devtools::install_github("ebuhle/SEMPSM")
+library(SEMPSM)
 library(matrixStats)
 library(dplyr)
 library(here)
@@ -144,23 +146,6 @@ gamma_indx <- which(!grepl("ccap|nlcd", colnames(X)))
 stan_dat <- stan_data(psm = psm, X = X, normal_indx = normal_indx, gamma_indx = gamma_indx,
                       L = 1, I0_Z = 1, I_su = 1, I_su_Z = 1, I_fa = 1, I_fa_Z = 1,
                       I_fit = rep(1, nrow(psm)), I_lpd = rep(1, nrow(psm)))
-# stan_dat <- list(S = nrow(X), 
-#                  D_normal = length(normal_indx), D_gamma = length(gamma_indx),
-#                  X = X, 
-#                  L = 1,  # user-specified!
-#                  N = nrow(psm), 
-#                  site = as.numeric(psm$site),
-#                  ppt_su = array(as.vector(scale(psm$ppt_su/10, scale = FALSE)), dim = nrow(psm)),
-#                  ppt_fa = array(as.vector(scale(psm$ppt_fa/10, scale = FALSE)), dim = nrow(psm)),
-#                  I0_Z = 1,
-#                  I_su = 1,
-#                  I_su_Z = 1,
-#                  I_fa = 1,
-#                  I_fa_Z = 1,
-#                  n = psm$n,
-#                  n_psm = psm$n_psm,
-#                  I_fit = rep(1, nrow(psm)),
-#                  I_lpd = rep(1, nrow(psm)))
 
 ## @knitr ignore
 #------------------------------------------------------
@@ -209,24 +194,12 @@ normal_indx <- grep("ccap|nlcd", colnames(X_all))
 gamma_indx <- which(!grepl("ccap|nlcd", colnames(X_all)))
 
 # Data for Stan
-stan_dat_all <- list(S = nrow(X_all), 
-                     D_normal = length(normal_indx), D_gamma = length(gamma_indx),
-                     # X = t(X_all), 
-                     X = X_all, 
-                     L = 1,  # user-specified!
-                     N = nrow(psm_all), 
-                     site = as.numeric(psm_all$site),
-                     ppt_su = array(as.vector(scale(psm_all$ppt_su/10, scale = FALSE)), dim = nrow(psm_all)),
-                     ppt_fa = array(as.vector(scale(psm_all$ppt_fa/10, scale = FALSE)), dim = nrow(psm_all)),
-                     I0_Z = 1,
-                     I_su = 1,
-                     I_su_Z = 1,
-                     I_fa = 1,
-                     I_fa_Z = 1,
-                     n = psm_all$n,
-                     n_psm = psm_all$n_psm,
-                     I_fit = as.numeric(psm_all$data=="psm"),
-                     I_lpd = rep(0, nrow(psm_all)))
+stan_dat_all <- stan_data(psm = psm_all, X = X_all, 
+                          normal_indx = normal_indx, gamma_indx = gamma_indx,
+                          L = 1, I0_Z = 1, I_su = 1, I_su_Z = 1, I_fa = 1, I_fa_Z = 1,
+                          I_fit = as.numeric(psm_all$data=="psm"), 
+                          I_lpd = rep(0, nrow(psm_all)))
+
 ## @knitr ignore
 #-----------------------------------------------------------------
 # CONSERVATION ATTRIBUTE DATA FOR TNC PRIORITIZATION ANALYSIS
