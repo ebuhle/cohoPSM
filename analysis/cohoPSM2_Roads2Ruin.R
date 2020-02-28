@@ -14,13 +14,6 @@ library(Hmisc)
 library(corrplot)
 library(here)
 
-# # load functions
-# source(here("analysis","functions","stan_mean.R"))
-# source(here("analysis","functions","extract1.R"))
-# source(here("analysis","functions","stan_init.R"))
-# source(here("analysis","functions","stan_init_cv.R"))
-# source(here("analysis","functions","kfold_partition.R"))
-
 # read and wrangle data
 source(here("analysis","cohoPSM1_data.R"))  
 
@@ -56,15 +49,6 @@ stan_psm <- SEMPSM(psm = psm, X = X, L = 1,
                             "mu_b_fa","b_fa_Z","sigma_b_fa","b_fa",
                             "sigma_psm","p_psm","ll_psm"), 
                    chains = 3, iter = 12000, warmup = 2000, thin = 5)
-# stan_psm <- stan(file = here("analysis","stan","cohoPSM_SEM.stan"),
-#                  data = stan_dat, 
-#                  init = lapply(1:3, function(i) stan_init(stan_dat)),
-#                  pars = c("a0","A","Z","phi","g_mu_X",
-#                           "mu_b0","b0_Z","sigma_b0","b0",
-#                           "mu_b_su","b_su_Z","sigma_b_su","b_su",
-#                           "mu_b_fa","b_fa_Z","sigma_b_fa","b_fa",
-#                           "sigma_psm","p_psm","ll_psm"), 
-#                  chains = 3, iter = 12000, warmup = 2000, thin = 5)
 
 # Inspect and use shinystan to explore samples
 print(stan_psm, prob = c(0.025, 0.5, 0.975), 
