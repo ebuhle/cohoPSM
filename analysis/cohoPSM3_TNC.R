@@ -237,7 +237,7 @@ stan_dat_rt <- stan_data(psm = psm, X = X_rt, normal_indx = normal_indx, gamma_i
 
 ## @knitr stan_psm_rt
 # Fit it!
-stan_psm_rt <- SEMPSM(psm = psm, X = X_rt, L = 1,
+stan_psm_rt <- sem_psm(psm = psm, X = X_rt, L = 1,
                    normal_indx = normal_indx, gamma_indx = gamma_indx,
                    I0_Z = 1, I_su = 1, I_su_Z = 1, I_fa = 1, I_fa_Z = 1,
                    I_fit = rep(1, nrow(psm)), I_lpd = rep(1, nrow(psm)),
@@ -317,7 +317,7 @@ for(j in sort(unique(site_group)))
   
   ## Full SEM
   # Fit
-  fit <- SEMPSM(psm = psm, X = X, L = 1,
+  fit <- sem_psm(psm = psm, X = X, L = 1,
                 normal_indx = normal_indx, gamma_indx = gamma_indx,
                 I0_Z = 1, I_su = 1, I_su_Z = 1, I_fa = 1, I_fa_Z = 1,
                 I_fit = as.numeric(site_group != j),  # training data
@@ -335,7 +335,7 @@ for(j in sort(unique(site_group)))
   
   ## Roads + traffic SEM
   # Fit
-  fit <- SEMPSM(psm = psm, X = X_rt, L = 1,
+  fit <- sem_psm(psm = psm, X = X_rt, L = 1,
                 normal_indx = normal_indx, gamma_indx = gamma_indx,
                 I0_Z = 1, I_su = 1, I_su_Z = 1, I_fa = 1, I_fa_Z = 1,
                 I_fit = as.numeric(site_group != j),  # training data

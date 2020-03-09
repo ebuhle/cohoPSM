@@ -39,7 +39,7 @@ if(file.exists(here("analysis","results","stan_psm_all.RData")))
 
 ## @knitr stan_psm_r2r
 # Fit it!
-stan_psm <- SEMPSM(psm = psm, X = X, L = 1,
+stan_psm <- sem_psm(psm = psm, X = X, L = 1,
                    normal_indx = normal_indx, gamma_indx = gamma_indx,
                    I0_Z = 1, I_su = 1, I_su_Z = 1, I_fa = 1, I_fa_Z = 1,
                    I_fit = rep(1, nrow(psm)), I_lpd = rep(1, nrow(psm)),
@@ -92,7 +92,7 @@ for(i in 1:length(stan_psm_list))
   cat("|", rep("*",i), rep(" ", length(stan_psm_list) - i), "| Working on model ", i, "/", 
       length(stan_psm_list), " (see Viewer for progress) \n\n", sep = "")
   
-  fit <- SEMPSM(psm = psm, X = X, L = 1,
+  fit <- sem_psm(psm = psm, X = X, L = 1,
                 normal_indx = normal_indx, gamma_indx = gamma_indx,
                 I0_Z = I_list$I0_Z, I_su = I_list$I_su, I_su_Z = I_list$I_su_Z, 
                 I_fa = I_list$I_fa, I_fa_Z = I_list$I_fa_Z,
@@ -184,7 +184,7 @@ for(i in 1:length(stan_psm_cv_year_list))
         grep(j, sort(unique(psm$year))), "/", length(unique(psm$year)), 
         " (see Viewer for progress) \n\n", sep = "")
     
-    fit <- SEMPSM(psm = psm, X = X, L = 1, fit = stan_psm,
+    fit <- sem_psm(psm = psm, X = X, L = 1, fit = stan_psm,
                   normal_indx = normal_indx, gamma_indx = gamma_indx,
                   I0_Z = I_list$I0_Z, I_su = I_list$I_su, I_su_Z = I_list$I_su_Z, 
                   I_fa = I_list$I_fa, I_fa_Z = I_list$I_fa_Z,
@@ -282,7 +282,7 @@ for(i in 1:length(stan_psm_cv_site_list))
         grep(j, sort(unique(site_group))), "/", length(unique(site_group)), 
         " (see Viewer for progress) \n\n", sep = "")
     
-    fit <- SEMPSM(psm = psm, X = X, L = 1, fit = stan_psm,
+    fit <- sem_psm(psm = psm, X = X, L = 1, fit = stan_psm,
                   normal_indx = normal_indx, gamma_indx = gamma_indx,
                   I0_Z = I_list$I0_Z, I_su = I_list$I_su, I_su_Z = I_list$I_su_Z, 
                   I_fa = I_list$I_fa, I_fa_Z = I_list$I_fa_Z,
@@ -343,7 +343,7 @@ save(stan_psm_cv_site_list, stan_psm_cv_site_mods, file = here("analysis","resul
 
 ## @knitr stan_psm_all_r2r
 # Fit it!
-stan_psm_all <- SEMPSM(psm = psm, X = X, L = 1,
+stan_psm_all <- sem_psm(psm = psm, X = X, L = 1,
                    normal_indx = normal_indx, gamma_indx = gamma_indx,
                    I0_Z = 1, I_su = 1, I_su_Z = 1, I_fa = 1, I_fa_Z = 1,
                    I_fit = rep(1, nrow(psm)), I_lpd = rep(1, nrow(psm)),
