@@ -626,7 +626,7 @@ if(save_plot) dev.off()
 
 #----------------------------------------------------------------------
 # Recalculate delta_Z for a range of psm_crit and alpha
-# Write out Z and delta_Z estimates and colors for each basin
+# Write out Z and delta_Z estimates and colors for each subbasin
 #----------------------------------------------------------------------
 
 psm_crit_vals <- c(0.2,0.3,0.4)
@@ -654,10 +654,10 @@ write.csv(delta_z_dat,file = here("analysis","results","psm_z_threshold_colors.c
 
 #----------------------------------------------------------------------
 # Surface plot showing delta_z as a function of psm_crit and alpha
-# for a selected site
+# for a selected subbasin
 #----------------------------------------------------------------------
 
-save_plot <- FALSE
+save_plot <- TRUE
 prediction_level <- "site"  # "site" or "year"-within-site
 show_site <- "2789"
 show_num <- which(levels(psm_all$site) == show_site)
@@ -670,24 +670,29 @@ delta_z_dat <- data.frame(delta_z_dat, delta_z = NA, col = NA)
 
 for(i in 1:nrow(delta_z_dat))
 {
-  dz <- sem_z_crit(stan_psm_all, data = stan_dat_all, psm_crit = delta_z_dat$psm_crit[i], 
-                   level = "site", alpha = delta_z_dat$alpha[i])$delta_z[show_num]
+  dz <- sem_z_crit(stan_psm_all, data = stan_dat_all, newsites = show_num,
+                   psm_crit = delta_z_dat$psm_crit[i], level = "site", 
+                   alpha = delta_z_dat$alpha[i])$delta_z[show_num]
   dzc <- color_values(dz, palette = get_palette("cividis")[256:1,])
-  delta_z_dat$delta_Z[i] <- dz
+  delta_z_dat$delta_z[i] <- dz
   delta_z_dat$col[i] <- dzc
 }
 
 if(save_plot) {
   png(filename=here("analysis","results","figures","delta_z_contour.png"),
-      width=7, height=7, units="in", res=300, type="cairo-png") 
+      width=7.5, height=7, units="in", res=300, type="cairo-png") 
 } else {
-  dev.new(width = 7, height = 7)
+  dev.new(width = 7.5, height = 7)
 }
 
+par(mar = c(5.1, 4.5, 4.1, 2.1))
 filled.contour(x = psm_crit_vals, y = alpha_vals, 
-               z = matrix(delta_z_dat$delta_z, length(psm_crit_vals), length(alpha_vals)))
-
-
+               z = matrix(delta_z_dat$delta_z, length(psm_crit_vals), length(alpha_vals)),
+               color.palette = cividis,
+               key.title = title(main = expression(Delta * italic(z)), line = 1, cex.main = 1.5), 
+               xlab = "Critical PSM threshold", 
+               ylab = bquote("Confidence level (" * alpha * ")"), 
+               cex.lab = 1.5, cex.axis = 1.2)
 
 if(save_plot) dev.off()
 
