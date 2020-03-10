@@ -506,7 +506,7 @@ if(save_plot) dev.off()
 # Highlight a selected site and show detail
 #----------------------------------------------------------------------
 
-save_plot <- TRUE
+save_plot <- FALSE
 psm_crit <- 0.3   # PSM threshold
 alpha <- 0.9  # credibility level
 prediction_level <- "site"  # "site" or "year"-within-site
@@ -659,8 +659,9 @@ write.csv(delta_z_dat,file = here("analysis","results","psm_z_threshold_colors.c
 
 save_plot <- TRUE
 prediction_level <- "site"  # "site" or "year"-within-site
-show_site <- "2789"
+show_site <- "845"
 show_num <- which(levels(psm_all$site) == show_site)
+recompute <- TRUE
 
 psm_crit_vals <- seq(0.1, 0.5, 0.01)
 alpha_vals <- seq(0.7, 0.99, 0.01)
@@ -668,20 +669,24 @@ alpha_vals <- seq(0.7, 0.99, 0.01)
 delta_z_dat <- expand.grid(site = show_site, psm_crit = psm_crit_vals, alpha = alpha_vals)
 delta_z_dat <- data.frame(delta_z_dat, delta_z = NA)
 
-for(i in 1:nrow(delta_z_dat))
+if(recompute)
 {
-  dz <- sem_z_crit(stan_psm_all, data = stan_dat_all, newsites = show_num,
-                   psm_crit = delta_z_dat$psm_crit[i], level = "site", 
-                   alpha = delta_z_dat$alpha[i])$delta_z[show_num]
-  # dzc <- color_values(dz, palette = get_palette("cividis")[256:1,])
-  # delta_z_dat$delta_z[i] <- dz
-  # delta_z_dat$col[i] <- dzc
-  if(i %% 10 == 0) cat(i, "/", nrow(delta_z_dat), "\n")
+  for(i in 1:nrow(delta_z_dat))
+  {
+    dz <- sem_z_crit(stan_psm_all, data = stan_dat_all, newsites = show_num,
+                     psm_crit = delta_z_dat$psm_crit[i], level = "site", 
+                     alpha = delta_z_dat$alpha[i])$delta_z[show_num]
+    delta_z_dat$delta_z[i] <- dz
+    if(i %% 10 == 0) cat(i, "/", nrow(delta_z_dat), "\n")
+  }
+  write.csv(delta_z_dat, here("analysis","results","delta_z_dat.csv"))
+} else {
+  delta_z_dat <- read.csv(here("analysis","results","delta_z_dat.csv"), header = TRUE)
 }
 
-# levs <- seq(min(delta_z_dat$delta_z), max(delta_z_dat$delta_z), 30)
-# mids <- 
-# cols <- 
+levs <- seq(min(delta_z_dat$delta_z), max(delta_z_dat$delta_z), length = 30)
+mids <- (head(levs, length(levs) - 1) + tail(levs, length(levs) - 1))/2
+cols <- color_values(mids, palette = get_palette("cividis")[256:1,])
 
 if(save_plot) {
   png(filename=here("analysis","results","figures","delta_z_contour.png"),
@@ -693,15 +698,13 @@ if(save_plot) {
 par(mar = c(5.1, 4.5, 4.1, 2.1))
 filled.contour(x = psm_crit_vals, y = alpha_vals, 
                z = matrix(delta_z_dat$delta_z, length(psm_crit_vals), length(alpha_vals)),
-               color.palette = cividis,
+               levels = levs, col = cols,
                key.title = title(main = expression(Delta * italic(z)), line = 1, cex.main = 1.5), 
                xlab = "Critical PSM threshold", 
                ylab = bquote("Confidence level (" * alpha * ")"), 
                cex.lab = 1.5, cex.axis = 1.2)
 
 if(save_plot) dev.off()
-
-
 
 
 #----------------------------------------------------------------------
