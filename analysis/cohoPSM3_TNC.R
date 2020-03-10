@@ -435,7 +435,7 @@ psm_pred_show_site <- cur_show_site$est
 c1 <- transparent("darkgray", 0.3)  # posterior predictive PSM curves, all sites
 c2 <- "gray"  # highlighted site
 c2t <- transparent(c2, 0.6)
-dzcols <- color_values(tmp, palette = get_palette("cividis")[256:1,])
+dzcols <- color_values(z_out$delta_z, palette = get_palette("cividis")[256:1,])
 dzcolst <- transparent(dzcols, 0.1)
 
 if(save_plot) {
@@ -666,17 +666,22 @@ psm_crit_vals <- seq(0.1, 0.5, 0.01)
 alpha_vals <- seq(0.7, 0.99, 0.01)
 
 delta_z_dat <- expand.grid(site = show_site, psm_crit = psm_crit_vals, alpha = alpha_vals)
-delta_z_dat <- data.frame(delta_z_dat, delta_z = NA, col = NA)
+delta_z_dat <- data.frame(delta_z_dat, delta_z = NA)
 
 for(i in 1:nrow(delta_z_dat))
 {
   dz <- sem_z_crit(stan_psm_all, data = stan_dat_all, newsites = show_num,
                    psm_crit = delta_z_dat$psm_crit[i], level = "site", 
                    alpha = delta_z_dat$alpha[i])$delta_z[show_num]
-  dzc <- color_values(dz, palette = get_palette("cividis")[256:1,])
-  delta_z_dat$delta_z[i] <- dz
-  delta_z_dat$col[i] <- dzc
+  # dzc <- color_values(dz, palette = get_palette("cividis")[256:1,])
+  # delta_z_dat$delta_z[i] <- dz
+  # delta_z_dat$col[i] <- dzc
+  if(i %% 10 == 0) cat(i, "/", nrow(delta_z_dat), "\n")
 }
+
+# levs <- seq(min(delta_z_dat$delta_z), max(delta_z_dat$delta_z), 30)
+# mids <- 
+# cols <- 
 
 if(save_plot) {
   png(filename=here("analysis","results","figures","delta_z_contour.png"),
