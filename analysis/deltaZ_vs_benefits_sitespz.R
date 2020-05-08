@@ -27,7 +27,7 @@ library(scales)
 psm_pre <- read.table(here("analysis","results","PSM_predictions.txt"), header=TRUE)
 spawn <- read.csv(here("data","spawner_data.csv"), header=TRUE)
 spatial_pred <- read.csv(here("data","spatial_data_predict.csv"), header=TRUE)
-z<-read.csv(here("analysis","results","psm_z_threshold_colors.csv"), header=TRUE)
+zall<-read.csv(here("analysis","results","psm_z_threshold_colors.csv"), header=TRUE)
 #spatial<- read.csv(here("data","spatial_data.csv"), header=TRUE)
 
 salmon <- read.csv(here("data","salmonscape","WA_integrated_Fish_coho_chinook_chum_with_WADOE.csv"),header=TRUE, skip=1)
@@ -37,7 +37,7 @@ input <- as.data.frame(NA)
 input$psm_thresh <-psm_thresh<- 0.3
 alph<-0.95
 input$attribute<-"Coho_Presence_m"
-z<-z[z$psm_crit==psm_thresh,]
+z<-zall[zall$psm_crit==psm_thresh,]
 z<-z[z$alpha==alph,]
 
 predsites <- TRUE #if false, selects out only IDs with PSM calculated from field data, rather than IDs with predicted PSM
@@ -50,7 +50,7 @@ dim(d)
 
 ## Step 4. Function to plot change in Z on x-axis and attribute of interest on the y axis
 zplotfx <- function(psm_thresh,attribut){
-  figname<-paste(attribut,psm_thresh,".pdf",sep="_")
+  figname<-paste(attribut,psm_thresh,"2.png",sep="_")
   #Commented out my way of calculating deltaz, as using Eric's for now
   #Zcrit<-min(d$Z[d$p_psm_mean>psm_thresh], na.rm=TRUE)
   #Calculate difference between Z_mean and Zcrit (=deltaZ, or the change in Z required to get PSM to 40%)
@@ -78,12 +78,16 @@ zplotfx <- function(psm_thresh,attribut){
   #quartz(width = 8, height = 5)
   png(here("analysis","results","figures",figname),height = 1000,width = 800)
   par(mfrow=c(2,1))
-  plot(dxy$delta_Z,dxy$benefit, cex=1.5,cex.lab=1.2,cex.axis=1.2,xlab="Effort (Delta Z)", ylab= paste(attribut), type="p", pch=d$psmshape, col=dxy$cols)
+  plot(dxy$delta_Z,dxy$benefit, cex=2,cex.lab=1.2,cex.axis=1.2,xlab="Effort (Delta Z)", ylim = c(0, max(dxy$benefit)),ylab= paste(attribut), type="p", pch=d$psmshape, col=dxy$cols, bty="l",mgp=c(1.5,.5,0), tck = -0.01, cex.axis = 1.2, cex.lab = 1.2, yaxs = "i", xaxs = "r", las = 1)
   abline(v=0, lty=2, lwd=2, col="black")
+  mtext(side=3,"A)",line=1,adj=0, cex=2)
+  
   #text(Zcrit,max(dxy$benefit),"zcrit", col= "blue")
   #mtext(side=1,"high",line=4,adj=1,cex=0.8)
   #mtext(side=1,"low",line=4,adj=0,cex=0.8)
-  plot(dxy$score,dxy$benefit, cex=1.5,cex.lab=1.2,cex.axis=1.2,xlab="Effort (Delta Z)", ylab= "Score", type="p", pch=d$psmshape, col=dxy$cols)
+  dxy$priority<-seq(1,dim(dxy)[1], by=1)
+  plot(dxy$delta_Z,dxy$priority, cex=2,cex.lab=1.2,cex.axis=1.2,ylim = c(dim(dxy)[1],0),xlab="Effort (Delta Z)", ylab= "Priority", type="p", pch=d$psmshape, col=dxy$cols, bty="l",mgp=c(1.5,.5,0), tck =-0.01,cex.axis = 1.2, cex.lab = 1.2, yaxs = "i", xaxs = "r", las = 1)
+  mtext(side=3,"B)",line=1,adj=0, cex=2)
   abline(v=0, lty=2, lwd=2, col="black")
   
   write.csv(dxy,here("analysis","results",paste(attribut,"scores.csv", sep="_")), row.names = FALSE)
@@ -93,9 +97,9 @@ zplotfx <- function(psm_thresh,attribut){
   }
 
 
-coho<-zplotfx (input$psm_thresh,"Coho_Presence_m")
+coho<-zplotfx (input$psm_thresh,"Coho_Presence_km")
 nsp<-zplotfx (input$psm_thresh,"nsp_pres")
-chin<-zplotfx (input$psm_thresh,"ChinFa_Presence_m")
+chin<-zplotfx (input$psm_thresh,"ChinFa_Presence_km")
 coho<-coho %>% distinct()
 nsp<-nsp %>% distinct()
 chin<-chin %>% distinct()
@@ -134,8 +138,8 @@ for (a in 1:length(alphas)){
     input$psm_thresh <-psm_thresh<- psm_ts[p]
     alph<-alphas[a]
     input$attribute<-"ChinFa_Presence_m"
-    z<-z[z$psm_crit==psm_thresh,]
-    z<-z[z$alpha==alph,]
+    zhere<-zall[zall$psm_crit==psm_thresh,]
+    zhere<-zhere[zhere$alphherea==alph,]
     
     chin<-zplotfx (input$psm_thresh,"ChinFa_Presence_m")
     scorename<-paste(alph,psm_thresh,"scorechin.csv",sep="_")

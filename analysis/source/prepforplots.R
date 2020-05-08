@@ -73,3 +73,6 @@ salmon$ID<-as.integer(salmon$ID)
 ## add in spatial data
 d<-left_join(d1z,salmon, by="ID")
 
+#add km for each salmon
+d$ChinFa_Presence_km<-d$ChinFa_Presence_m/1000
+d$Coho_Presence_km<-d$Coho_Presence_m/1000
