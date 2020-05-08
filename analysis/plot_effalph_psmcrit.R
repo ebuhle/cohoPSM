@@ -5,7 +5,7 @@
 ## housekeeping
 rm(list=ls()) 
 options(device = ifelse(.Platform$OS.type == "windows", "windows", "quartz"))
-options(stringsAsFactors = FALSE)
+#options(stringsAsFactors = FALSE)
 ##set working directory
 setwd("~/GitHub/cohoPSM")
 #setwd("/Users/aileneettinger/Documents/GitHub/cohoPSM")
@@ -22,7 +22,7 @@ library(tidyr)
 files<-list.files(here("analysis","results","scores"))
 #select out only the coho scores first
 files<-files[grep("score.csv",files)]
-
+files.95.3<-files[grep("0.95_0.3_",files)]
 allfiles<-c()
 top25res<-c()
 top25cons<-c()
@@ -46,7 +46,7 @@ for(i in 1:length(files)){
 }
 colnames(top25res)<-colnames(top25cons)<-alphpsmcrit
 rownames(top25res)<-rownames(top25cons)<-NULL
-
+head(alphpsmcrit)
 #convert allfiles from long format to wide format
 allfiles<-allfiles[,-which(colnames(allfiles)=="cols")]
 allfiles$ID<-factor(allfiles$ID)
@@ -56,38 +56,59 @@ allfiles$psmcrit<-factor(allfiles$psmcrit)
 allfiles<-allfiles[order(allfiles$ID,allfiles$alpha,allfiles$psmcrit),]
 allfiles$action<-"cons"
 allfiles$action[allfiles$delta_Z<0]<-"rest"
-allsub<-subset(allfiles,select=c(ID,score,alpha,psmcrit))
-allwide<-spread(allsub,alpha,score)
-wide.3<-allwide[allwide$psmcrit==0.3,]
+allsub<-subset(allfiles,select=c(ID,priority,alpha,psmcrit))
+allwide<-spread(allsub,alpha,priority)
+allwide$psmcrit<-as.numeric(as.character(allwide$psmcrit))
+wide.1<-allwide[allwide$psmcrit==0.1,]
+wide.2<-allwide[allwide$psmcrit==0.2,]
 wide.4<-allwide[allwide$psmcrit==0.4,]
+wide.5<-allwide[allwide$psmcrit==0.5,]
+wide.15<-allwide[allwide$psmcrit==0.15,]
+wide.25<-allwide[allwide$psmcrit==0.25,]
+wide.35<-allwide[allwide$psmcrit==0.35,]
+wide.45<-allwide[allwide$psmcrit==0.45,]
+wide.55<-allwide[allwide$psmcrit==0.55,]
+
 getdiffs<-function(allwide,psmcrit){
   w<-allwide[allwide$psmcrit==psmcrit,]
   w<-w[order(w$ID),]
+  w$diff.99<-abs((w$`0.95`-w$`0.99`)/w$`0.95`)
+  w$diff.95<-abs((w$`0.95`-w$`0.95`)/w$`0.95`)
   w$diff.9<-abs((w$`0.95`-w$`0.9_`)/w$`0.95`)
+  w$diff.85<-abs((w$`0.95`-w$`0.85`)/w$`0.95`)
   w$diff.8<-abs((w$`0.95`-w$`0.8_`)/w$`0.95`)
+  w$diff.75<-abs((w$`0.95`-w$`0.75`)/w$`0.95`)
+  w$diff.7<-abs((w$`0.95`-w$`0.7_`)/w$`0.95`)
+  
   return(w) 
 }
-wide.2<-getdiffs(allwide,0.2)
-wide.3<-getdiffs(allwide,0.3)
-wide.4<-getdiffs(allwide,0.4)
-wide.3$diff.psm.4<-abs((wide.3$`0.95`-wide.4$`0.95`)/wide.3$`0.95`)
+
+wide.3<-getdiffs(allwide,.3)
+wide.3$diff.psm.1<-abs((wide.3$`0.95`-wide.1$`0.95`)/wide.3$`0.95`)
+wide.3$diff.psm.15<-abs((wide.3$`0.95`-wide.15$`0.95`)/wide.3$`0.95`)
 wide.3$diff.psm.2<-abs((wide.3$`0.95`-wide.2$`0.95`)/wide.3$`0.95`)
+wide.3$diff.psm.25<-abs((wide.3$`0.95`-wide.25$`0.95`)/wide.3$`0.95`)
+wide.3$diff.psm.35<-abs((wide.3$`0.95`-wide.35$`0.95`)/wide.3$`0.95`)
+wide.3$diff.psm.4<-abs((wide.3$`0.95`-wide.4$`0.95`)/wide.3$`0.95`)
+wide.3$diff.psm.45<-abs((wide.3$`0.95`-wide.45$`0.95`)/wide.3$`0.95`)
+wide.3$diff.psm.5<-abs((wide.3$`0.95`-wide.5$`0.95`)/wide.3$`0.95`)
 
 #read in the score using chin as metric
 chin<-read.csv(here("analysis","results","scores","0.95_0.3_scorechin.csv"))
-chinsub<-subset(chin,select=c(ID,score))
+chinsub<-subset(chin,select=c(ID,priority))
 chinsub$ID<-as.integer(chinsub$ID)
 nsp<-read.csv(here("analysis","results","scores","0.95_0.3_scorensp.csv"))
-nspsub<-subset(nsp,select=c(ID,score))
+nspsub<-subset(nsp,select=c(ID,priority))
 wide.3$ID<-as.integer(wide.3$ID)
 
 chincoho<-left_join(wide.3,chinsub)
-chincoho<-chincoho[-which(is.na(chincoho$score)),]
-colnames(chincoho)[10]<-"chinscore"
+chincoho<-chincoho[-which(is.na(chincoho$priority)),]
+colnames(chincoho)[which(colnames(chincoho)=="priority")]<-"chinscore"
 nspcoho<-left_join(wide.3,nspsub)
-nspcoho<-nspcoho[-which(is.na(nspcoho$score)),]
-colnames(nspcoho)[10]<-"nspscore"
+nspcoho<-nspcoho[-which(is.na(nspcoho$priority)),]
+colnames(nspcoho)[which(colnames(nspcoho)=="priority")]<-"nspscore"
 chincoho$diff.chin<-abs((chincoho$`0.95`-chincoho$chinscore)/chincoho$`0.95`)
+
 chincoho$rank<- order(chincoho$`0.95`)
 chincoho$rank.chin<- order(chincoho$chinscore)
 
@@ -103,7 +124,7 @@ wide.3$rank.9<- order(wide.3$`0.9_`)
 wide.4$rank<- order(wide.4$`0.95`)
 wide.2$rank<- order(wide.2$`0.95`)
 
-
+quartz()
 windows(width=10,height=15)
 par(mfrow=c(3,2))
 plot(wide.3$rank,wide.3$rank.9)
@@ -112,16 +133,65 @@ plot(wide.3$rank,wide.2$rank)
 plot(wide.3$rank,wide.4$rank)
 plot(chincoho$rank,chincoho$rank)
 plot(nspcoho$rank,nspcoho$rank)
-#plot diffs on a single plot
-x<-c(1,2,3,4,5,6)
-y<-c(mean(wide.3$diff.psm.2),mean(wide.3$diff.psm.4),mean(wide.3$diff.8),mean(wide.4$diff.9),mean(chincoho$diff.chin),mean(nspcoho$diff.nsp))
-y.sd<-c(sd(wide.3$diff.psm.2),sd(wide.3$diff.psm.4),sd(wide.3$diff.8),sd(wide.4$diff.9),sd(chincoho$diff.chin),sd(nspcoho$diff.nsp))
-windows()
-plot(x,y,type="p",pch=16,col="lightblue", ylab="Difference in Prioritization", xlab="",xaxt="n", ylim=c(0,1))
+#plot diffs on 3 panels
+
+png(here("analysis","results","figures","metricuncertaintycomp.png"),height = 500,width = 1000)
+
+par(mfrow=c(1,3))
+x<-psm_crit_vals
+y<-c(mean(wide.3$diff.psm.1),
+     mean(wide.3$diff.psm.15),
+     mean(wide.3$diff.psm.2),
+     mean(wide.3$diff.psm.25),
+     mean(wide.3$diff.psm.3),
+     mean(wide.3$diff.psm.35),
+     mean(wide.3$diff.psm.4),
+     mean(wide.3$diff.psm.45),
+     mean(wide.3$diff.psm.5))
+y.sd<-c(sd(wide.3$diff.psm.1),
+        sd(wide.3$diff.psm.15),
+        sd(wide.3$diff.psm.2),
+        sd(wide.3$diff.psm.25),
+        sd(wide.3$diff.psm.3),
+        sd(wide.3$diff.psm.35),
+        sd(wide.3$diff.psm.4),
+        sd(wide.3$diff.psm.45),
+        sd(wide.3$diff.psm.5))
+
+plot(x,y,type="p",pch=16,col="darkgray", ylab="Difference in Prioritization (Proportion)", xlab="Critical PSM Threshold", ylim=c(0,5))
+arrows(x,y+y.sd,x,y-y.sd,code=3,length=0,col="lightgray",lwd=2 )
+points(x,y,pch=16,col="darkgray",cex=2)
+#alpha/uncertainty
+x=alpha_vals
+y<-c(mean(wide.3$diff.7),
+       mean(wide.3$diff.75),
+       mean(wide.3$diff.8),
+       mean(wide.3$diff.85),
+       mean(wide.3$diff.9),
+       mean(wide.3$diff.95),
+       mean(wide.3$diff.99))
+y.sd<-c(sd(wide.3$diff.7),
+     sd(wide.3$diff.75),
+     sd(wide.3$diff.8),
+     sd(wide.3$diff.85),
+     sd(wide.3$diff.9),
+     sd(wide.3$diff.95),
+     sd(wide.3$diff.99))
+plot(x,y,type="p",pch=16,col="darkgray", ylab="Difference in Prioritization (Proportion)", xlab="Uncertainty", ylim=c(0,5))
 arrows(x,y+y.sd,x,y-y.sd,code=3,length=0,col="gray",lwd=2 )
-points(x,y,pch=16,col="lightblue",cex=1.5)
-axis(side=1,at=c(1,2,3,4,5,6),labels=c("0.2","0.4","0.8","0.9","Chin","Nsp"))
-axis(side=1,at=c(1.5,3.5,5.5),labels=c("psm","alpha","Metric"),line=2, tick=FALSE, lwd=0)
+points(x,y,pch=16,col="darkgray",cex=2)
+#metric
+x=c(.5,1.5)
+y<-c(mean(chincoho$diff.chin),
+     mean(nspcoho$diff.nsp))
+y.sd<-c(sd(chincoho$diff.chin),
+        sd(nspcoho$diff.nsp))
+plot(x,y,type="p",pch=16,col="darkgray", ylab="Difference in Prioritization (Proportion)", xlab="Metric", xaxt="n",xlim=c(-1,3),ylim=c(0,5))
+arrows(x,y+y.sd,x,y-y.sd,code=3,length=0,col="gray",lwd=2)
+points(x,y,pch=16,col="darkgray",cex=2)
+axis(side=1,at=c(0.5, 1.5),labels=c("Chinook","Nsp"),line=0,tick=FALSE, lwd=0)
+dev.off()
+
 
 r<-c(cor(wide.3$`0.95`,wide.3$`0.9_`),
      cor(wide.3$`0.95`,wide.3$`0.8_`),
