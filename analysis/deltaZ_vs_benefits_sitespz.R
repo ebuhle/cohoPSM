@@ -77,17 +77,19 @@ zplotfx <- function(psm_thresh,attribut){
   colnames(dxy)[1:4]<-c("ID","delta_Z","benefit.stan","benefit")
   #quartz(width = 8, height = 5)
   png(here("analysis","results","figures",figname),height = 1000,width = 800)
-  par(mfrow=c(2,1))
-  plot(dxy$delta_Z,dxy$benefit, cex=2,cex.lab=1.2,cex.axis=1.2,xlab="Effort (Delta Z)", ylim = c(0, max(dxy$benefit)),ylab= paste(attribut), type="p", pch=d$psmshape, col=dxy$cols, bty="l",mgp=c(1.5,.5,0), tck = -0.01, cex.axis = 1.2, cex.lab = 1.2, yaxs = "i", xaxs = "r", las = 1)
+  par(mfrow=c(2,1), xpd=NA)
+  plot(dxy$delta_Z,dxy$benefit, cex=2,cex.lab=1.2,cex.axis=1.2,xlab="",ylab="", ylim = c(0, max(dxy$benefit)), type="p", pch=d$psmshape, col=dxy$cols, bty="l",mgp=c(1.5,.5,0), tck = -0.01, cex.axis = 1.2, cex.lab = 1.2, yaxs = "r", xaxs = "r", las = 1)
+  #ylab= paste(attribut),xlab ="Effort (Delta Z)"
   abline(v=0, lty=2, lwd=2, col="black")
-  mtext(side=3,"A)",line=1,adj=0, cex=2)
+  #mtext(side=3,"A)",line=1,adj=0, cex=2)
   
   #text(Zcrit,max(dxy$benefit),"zcrit", col= "blue")
   #mtext(side=1,"high",line=4,adj=1,cex=0.8)
   #mtext(side=1,"low",line=4,adj=0,cex=0.8)
   dxy$priority<-seq(1,dim(dxy)[1], by=1)
-  plot(dxy$delta_Z,dxy$priority, cex=2,cex.lab=1.2,cex.axis=1.2,ylim = c(dim(dxy)[1],0),xlab="Effort (Delta Z)", ylab= "Priority", type="p", pch=d$psmshape, col=dxy$cols, bty="l",mgp=c(1.5,.5,0), tck =-0.01,cex.axis = 1.2, cex.lab = 1.2, yaxs = "i", xaxs = "r", las = 1)
-  mtext(side=3,"B)",line=1,adj=0, cex=2)
+  plot(dxy$delta_Z,dxy$priority, cex=2,cex.lab=1.2,cex.axis=1.2,ylim = c(dim(dxy)[1],1),xlab="", ylab= "", type="p", pch=d$psmshape, col=dxy$cols, bty="l",mgp=c(1.5,.5,0), tck =-0.01,cex.axis = 1.2, cex.lab = 1.2, yaxs = "i", xaxs = "r", las = 1)
+  #xlab="Effort (Delta Z)", ylab= "Priority"
+  #mtext(side=3,"B)",line=1,adj=0, cex=2)
   abline(v=0, lty=2, lwd=2, col="black")
   
   write.csv(dxy,here("analysis","results",paste(attribut,"scores.csv", sep="_")), row.names = FALSE)
