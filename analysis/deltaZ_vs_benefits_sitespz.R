@@ -50,7 +50,7 @@ dim(d)
 
 ## Step 4. Function to plot change in Z on x-axis and attribute of interest on the y axis
 zplotfx <- function(psm_thresh,attribut){
-  figname<-paste(attribut,psm_thresh,"2.png",sep="_")
+  figname<-paste(attribut,psm_thresh,alph,".png",sep="_")
   #Commented out my way of calculating deltaz, as using Eric's for now
   #Zcrit<-min(d$Z[d$p_psm_mean>psm_thresh], na.rm=TRUE)
   #Calculate difference between Z_mean and Zcrit (=deltaZ, or the change in Z required to get PSM to 40%)
@@ -76,9 +76,9 @@ zplotfx <- function(psm_thresh,attribut){
   #dxy<- data.frame(cbind(dxy,cols))
   colnames(dxy)[1:4]<-c("ID","delta_Z","benefit.stan","benefit")
   #quartz(width = 8, height = 5)
-  png(here("analysis","results","figures",figname),height = 1000,width = 800)
+  png(here("analysis","results","figures","metricplots",figname),height = 1000,width = 800)
   par(mfrow=c(2,1), xpd=NA)
-  plot(dxy$delta_Z,dxy$benefit, cex=2,cex.lab=1.2,cex.axis=1.2,xlab="",ylab="", ylim = c(0, max(dxy$benefit)), type="p", pch=d$psmshape, col=dxy$cols, bty="l",mgp=c(1.5,.5,0), tck = -0.01, cex.axis = 1.2, cex.lab = 1.2, yaxs = "r", xaxs = "r", las = 1)
+  plot(dxy$delta_Z,dxy$benefit, cex=2,cex.lab=1.2,cex.axis=1.2,xlab="",ylab="", ylim = c(0, max(dxy$benefit)), type="p", pch=d$psmshape, col=dxy$cols, bty="l",mgp=c(1.5,.5,0), tck = -0.01, cex.axis = 1.2, cex.lab = 1.2, yaxs = "i", xaxs = "r", las = 1)
   #ylab= paste(attribut),xlab ="Effort (Delta Z)"
   abline(v=0, lty=2, lwd=2, col="black")
   #mtext(side=3,"A)",line=1,adj=0, cex=2)
@@ -116,23 +116,31 @@ scorenamensp<-paste(alph,psm_thresh,"scorensp.csv",sep="_")
 write.csv(nsp,file=here("analysis","results","scores",scorenamensp), row.names = FALSE)
 
 #Get scores for alphas from 0.5-.99, thesholds from 0.1-0.5 for coho 
+
 alphas=c(0.7, 0.75,0.8,0.85, 0.90, 0.95, 0.99)
 psm_ts<-seq(from =0.1, to = 0.5, by = 0.05)
+
 for (a in 1:length(alphas)){
   for (p in 1:length(psm_ts)){
-input <- as.data.frame(NA)
-input$psm_thresh <-psm_thresh<- psm_ts[p]
-alph<-alphas[a]
-input$attribute<-"Coho_Presence_m"
-z<-z[z$psm_crit==psm_thresh,]
-z<-z[z$alpha==alph,]
-
-coho<-zplotfx (input$psm_thresh,"Coho_Presence_m")
-scorename<-paste(alph,psm_thresh,"score.csv",sep="_")
-write.csv(coho,file=here("analysis","results","scores",scorename), row.names = FALSE)
+    input <- as.data.frame(NA)
+    input$psm_thresh <-psm_thresh<- psm_ts[p]
+    alph<-alphas[a]
+    input$attribute<-"Coho_Presence_km"
+    z<-zall[zall$psm_crit==paste(psm_thresh),]
+    
+    z<-z[z$alpha==alph,]
+    predsites <- TRUE #if false, selects out only IDs with PSM calculated from field data, rather than IDs with predicted PSM
+    
+    ## Step 3: combine all the data and prep for plotting calculate mean spawner abundance by ID, across years
+    ## combined data file with things we want to plot is called "d"
+    source(here("analysis","source","prepforplots.R"))
+    
+    coho<-zplotfx (input$psm_thresh,"Coho_Presence_km")
+    scorename<-paste(alph,psm_thresh,"score.csv",sep="_")
+    write.csv(coho,file=here("analysis","results","scores",scorename), row.names = FALSE)
   }
 }
-#Get scores for alphas from 0.5-.99, thesholds from 0.1-0.5 for coho 
+#Get scores for alphas from 0.5-.99, thesholds from 0.1-0.5 for chinook
 
 for (a in 1:length(alphas)){
   for (p in 1:length(psm_ts)){
@@ -140,14 +148,22 @@ for (a in 1:length(alphas)){
     input$psm_thresh <-psm_thresh<- psm_ts[p]
     alph<-alphas[a]
     input$attribute<-"ChinFa_Presence_m"
-    zhere<-zall[zall$psm_crit==psm_thresh,]
-    zhere<-zhere[zhere$alphherea==alph,]
+    z<-zall[zall$psm_crit==paste(psm_thresh),]
+    z<-z[z$alpha==alph,]
+    predsites <- TRUE #if false, selects out only IDs with PSM calculated from field data, rather than IDs with predicted PSM
+    
+    ## Step 3: combine all the data and prep for plotting calculate mean spawner abundance by ID, across years
+    ## combined data file with things we want to plot is called "d"
+    source(here("analysis","source","prepforplots.R"))
     
     chin<-zplotfx (input$psm_thresh,"ChinFa_Presence_m")
     scorename<-paste(alph,psm_thresh,"scorechin.csv",sep="_")
     write.csv(chin,file=here("analysis","results","scores",scorename), row.names = FALSE)
   }
 }
+
+
+
 ##Make a schematic diagram showing our approach 
 #dev.new(height=8,width=16)
 #pdf(here("analysis","results","figures","benefits_stream_spp_wscheme.pdf"), width = 15, height = 8)
