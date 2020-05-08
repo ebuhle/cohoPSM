@@ -14,7 +14,6 @@
 ## housekeeping
 rm(list=ls()) 
 options(device = ifelse(.Platform$OS.type == "windows", "windows", "quartz"))
-options(stringsAsFactors = FALSE)
 ##set working directory
 setwd("~/GitHub/cohoPSM")
 #setwd("/Users/aileneettinger/Documents/GitHub/cohoPSM")
@@ -77,12 +76,16 @@ zplotfx <- function(psm_thresh,attribut){
   #dxy<- data.frame(cbind(dxy,cols))
   colnames(dxy)[1:4]<-c("ID","delta_Z","benefit.stan","benefit")
   #quartz(width = 8, height = 5)
-  pdf(here("analysis","results","figures",figname))
+  png(here("analysis","results","figures",figname),height = 1000,width = 800)
+  par(mfrow=c(2,1))
   plot(dxy$delta_Z,dxy$benefit, cex=1.5,cex.lab=1.2,cex.axis=1.2,xlab="Effort (Delta Z)", ylab= paste(attribut), type="p", pch=d$psmshape, col=dxy$cols)
   abline(v=0, lty=2, lwd=2, col="black")
   #text(Zcrit,max(dxy$benefit),"zcrit", col= "blue")
   #mtext(side=1,"high",line=4,adj=1,cex=0.8)
   #mtext(side=1,"low",line=4,adj=0,cex=0.8)
+  plot(dxy$score,dxy$benefit, cex=1.5,cex.lab=1.2,cex.axis=1.2,xlab="Effort (Delta Z)", ylab= "Score", type="p", pch=d$psmshape, col=dxy$cols)
+  abline(v=0, lty=2, lwd=2, col="black")
+  
   write.csv(dxy,here("analysis","results",paste(attribut,"scores.csv", sep="_")), row.names = FALSE)
   #legend("topleft", legend=c("Highest priority","Lowest priority"), pch=19,col=c(cols[1],cols[length(cols)]), cex=.8, bty="n")
   dev.off()
@@ -106,7 +109,39 @@ write.csv(chin,file=here("analysis","results","scores",scorenamechin), row.names
 scorenamensp<-paste(alph,psm_thresh,"scorensp.csv",sep="_")
 write.csv(nsp,file=here("analysis","results","scores",scorenamensp), row.names = FALSE)
 
+#Get scores for alphas from 0.5-.99, thesholds from 0.1-0.5 for coho 
+alphas=c(0.7, 0.75,0.8,0.85, 0.90, 0.95, 0.99)
+psm_ts<-seq(from =0.1, to = 0.5, by = 0.05)
+for (a in 1:length(alphas)){
+  for (p in 1:length(psm_ts)){
+input <- as.data.frame(NA)
+input$psm_thresh <-psm_thresh<- psm_ts[p]
+alph<-alphas[a]
+input$attribute<-"Coho_Presence_m"
+z<-z[z$psm_crit==psm_thresh,]
+z<-z[z$alpha==alph,]
 
+coho<-zplotfx (input$psm_thresh,"Coho_Presence_m")
+scorename<-paste(alph,psm_thresh,"score.csv",sep="_")
+write.csv(coho,file=here("analysis","results","scores",scorename), row.names = FALSE)
+  }
+}
+#Get scores for alphas from 0.5-.99, thesholds from 0.1-0.5 for coho 
+
+for (a in 1:length(alphas)){
+  for (p in 1:length(psm_ts)){
+    input <- as.data.frame(NA)
+    input$psm_thresh <-psm_thresh<- psm_ts[p]
+    alph<-alphas[a]
+    input$attribute<-"ChinFa_Presence_m"
+    z<-z[z$psm_crit==psm_thresh,]
+    z<-z[z$alpha==alph,]
+    
+    chin<-zplotfx (input$psm_thresh,"ChinFa_Presence_m")
+    scorename<-paste(alph,psm_thresh,"scorechin.csv",sep="_")
+    write.csv(chin,file=here("analysis","results","scores",scorename), row.names = FALSE)
+  }
+}
 ##Make a schematic diagram showing our approach 
 #dev.new(height=8,width=16)
 #pdf(here("analysis","results","figures","benefits_stream_spp_wscheme.pdf"), width = 15, height = 8)
