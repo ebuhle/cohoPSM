@@ -163,6 +163,27 @@ for (a in 1:length(alphas)){
 }
 
 
+for (a in 1:length(alphas)){
+  for (p in 1:length(psm_ts)){
+    input <- as.data.frame(NA)
+    input$psm_thresh <-psm_thresh<- psm_ts[p]
+    alph<-alphas[a]
+    input$attribute<-"nsp_pres"
+    z<-zall[zall$psm_crit==paste(psm_thresh),]
+    z<-z[z$alpha==alph,]
+    predsites <- TRUE #if false, selects out only IDs with PSM calculated from field data, rather than IDs with predicted PSM
+    
+    ## Step 3: combine all the data and prep for plotting calculate mean spawner abundance by ID, across years
+    ## combined data file with things we want to plot is called "d"
+    source(here("analysis","source","prepforplots.R"))
+    
+    nsp<-zplotfx (input$psm_thresh,"nsp_pres")
+    scorename<-paste(alph,psm_thresh,"scorensp.csv",sep="_")
+    write.csv(nsp,file=here("analysis","results","scores",scorename), row.names = FALSE)
+  }
+}
+
+
 
 ##Make a schematic diagram showing our approach 
 #dev.new(height=8,width=16)
