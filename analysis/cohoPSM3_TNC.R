@@ -298,7 +298,7 @@ site_group <- partitions$group
 
 # List of candidate models
 stan_psm_cv_site_list <- vector("list", 3)
-names(stan_psm_cv_site_list) <- c("SEM_full","SEM_rt","GLMM")
+names(stan_psm_cv_site_list) <- c("SEM_full","GLMM")
 for(i in 1:length(stan_psm_cv_site_list))
 {
   stan_psm_cv_site_list[[i]] <- list(fit = vector("list",length(unique(site_group))),
@@ -407,9 +407,9 @@ save(stan_psm_cv_site_list, stan_psm_cv_site_mods, file = here("analysis","resul
 # Highlight a selected site and show detail
 #----------------------------------------------------------------------
 
-save_plot <- FALSE
+save_plot <- TRUE
 psm_crit <- 0.3   # PSM threshold
-alpha <- 0.9  # credibility level
+alpha <- 0.95  # credibility level
 prediction_level <- "site"  # "site" or "year"-within-site
 show_site <- "2789"
 show_num <- which(levels(psm_all$site) == show_site)
@@ -447,9 +447,9 @@ if(save_plot) {
 
 par(mar = c(5.1, 4.2, 4.1, 4))
       
-plot(Z, PSM, pch = "", las = 1, cex.axis = 1.2, cex.lab = 1.5,
+plot(Z, PSM, pch = "", las = 1, cex.axis = 2, cex.lab = 2,
      xlim = range(newZ), ylim = c(0,1), xaxs = "i",
-     xlab = bquote("Urbanization (" * italic(Z) * ")"), ylab = "Predicted PSM")
+     xlab = bquote("Urbanization (" * italic(Z) * ")"), ylab = "Predicted Mortality")
 # all PSM vs. Z curves and current conditions
 for(j in unique(newsites))
   lines(newZ[newsites==j], colMedians(psm_pred[,newsites==j]), col = c1)
@@ -506,9 +506,9 @@ if(save_plot) dev.off()
 # Highlight a selected site and show detail
 #----------------------------------------------------------------------
 
-save_plot <- FALSE
+save_plot <- TRUE
 psm_crit <- 0.3   # PSM threshold
-alpha <- 0.9  # credibility level
+alpha <- 0.95  # credibility level
 prediction_level <- "site"  # "site" or "year"-within-site
 show_site <- "2789"
 show_num <- which(levels(psm_all$site) == show_site)
@@ -544,14 +544,14 @@ if(save_plot) {
   dev.new(width = 15, height = 5)
 }
 
-par(mfrow = c(1,3), mar = c(5.1, 4.2, 4.1, 2))
+par(mfrow = c(1,3), mar = c(5.1, 4.5, 4.1, 3))
 
 # Panel A
 
-plot(Z, PSM, pch = "", las = 1, cex.axis = 1.2, cex.lab = 1.5,
+plot(Z, PSM, pch = "", las = 1, cex.axis = 1.5, cex.lab = 1.8,
      xlim = range(newZ), ylim = c(0,1), xaxs = "i",
      xlab = bquote("Urbanization (" * italic(Z) * ")"), ylab = "Predicted PSM")
-title("A", adj = 0, cex.main = 1.5)
+title("A)", adj = 0, cex.main = 1.5)
 # selected site: PSM vs. Z curve and current conditions
 polygon(c(newZ[newsites==show_crv], rev(newZ[newsites==show_crv])),
         c(colQuantiles(psm_pred[,newsites==show_crv], probs = 0.05),
@@ -563,10 +563,10 @@ points(Z[show_num], PSM[show_num], pch = ifelse(show_site %in% psm$site, 15, 16)
 
 # Panel B
 
-plot(Z, PSM, pch = "", las = 1, cex.axis = 1.2, cex.lab = 1.5,
+plot(Z, PSM, pch = "", las = 1, cex.axis =1.5, cex.lab = 1.8,
      xlim = range(newZ), ylim = c(0,1), xaxs = "i",
-     xlab = bquote("Urbanization (" * italic(Z) * ")"), ylab = "Predicted PSM")
-title("B", adj = 0, cex.main = 1.5)
+     xlab = bquote("Urbanization (" * italic(Z) * ")"), ylab = "Predicted Mortality")
+title("B)", adj = 0, cex.main = 1.5)
 # selected site: PSM vs. Z curve and current conditions
 polygon(c(newZ[newsites==show_crv], rev(newZ[newsites==show_crv])),
         c(colQuantiles(psm_pred[,newsites==show_crv], probs = 0.05),
@@ -600,10 +600,10 @@ text(par("usr")[1] - 0.02, psm_crit, bquote(PSM[crit]), adj = c(1,0.5), col = "r
 
 # Panel C
 
-plot(Z, PSM, pch = "", las = 1, cex.axis = 1.2, cex.lab = 1.5,
+plot(Z, PSM, pch = "", las = 1, cex.axis = 1.5, cex.lab = 1.8,
      xlim = range(newZ), ylim = c(0,1), xaxs = "i",
-     xlab = bquote("Urbanization (" * italic(Z) * ")"), ylab = "Predicted PSM")
-title("C", adj = 0, cex.main = 1.5)
+     xlab = bquote("Urbanization (" * italic(Z) * ")"), ylab = "Predicted Mortality")
+title("C)", adj = 0, cex.main = 1.5)
 # all PSM vs. Z curves and current conditions
 for(j in unique(newsites))
   lines(newZ[newsites==j], colMedians(psm_pred[,newsites==j]), col = c1)
@@ -629,8 +629,8 @@ if(save_plot) dev.off()
 # Write out Z and delta_Z estimates and colors for each subbasin
 #----------------------------------------------------------------------
 
-psm_crit_vals <- c(0.2,0.3,0.4)
-alpha_vals <- c(0.8,0.9,0.95)
+psm_crit_vals <- seq(from =0.1, to = 0.5, by = 0.05)
+alpha_vals <- c(0.7, 0.75, 0.8, 0.85, 0.90, 0.95, 0.99)
 
 delta_z_dat <- expand.grid(site = levels(psm_all$site), psm_crit = psm_crit_vals, 
                            alpha = alpha_vals)
