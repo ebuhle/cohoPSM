@@ -1,4 +1,58 @@
+  #make a table andplot showing how change sin alpha and psmcrit affect prioritization
+  #started by ailene
+  #dec 22, 2019
+  
+  ## housekeeping
+  rm(list=ls()) 
+options(device = ifelse(.Platform$OS.type == "windows", "windows", "quartz"))
+#options(stringsAsFactors = FALSE)
+##set working directory
+setwd("~/GitHub/cohoPSM")
+#setwd("/Users/aileneettinger/Documents/GitHub/cohoPSM")
+## libraries
+library(here)
+library(dplyr)
+library(RColorBrewer)
+library(colorRamps)
+library(scales)
+library(tidyr)
+## Step 1: Make a table of the top highest prioritiy site for conservation and restoration, using different priorities
 
+#Read in all the files in the "scores" folder and put together into one dataframe
+files<-list.files(here("analysis","results","scores"))
+#select out only the coho scores first
+files<-files[grep("score.csv",files)]
+files.95.3<-files[grep("0.95_0.3_",files)]
+allfiles<-c()
+top25res<-c()
+top25cons<-c()
+alphpsmcrit<-c()
+for(i in 1:length(files)){
+  f<-read.csv(here("analysis","results","scores",files[i]))
+  f<-f[order(f$score),]
+  f$alpha<-substr(files[i],1,4)
+  f$psmcrit<-substr(files[i],nchar(files[i])-12,nchar(files[i])-10)
+  allfiles<-rbind(allfiles,f)
+  frest<-f[f$delta_Z<0,]
+  frest<-frest[order(frest$score),]
+  frest$rank<-order(frest$score)
+  fcons<-f[f$delta_Z>0,]
+  fcons<-fcons[order(fcons$score),]
+  fcons$rank<-order(fcons$score)
+  top25res<-cbind(top25res,frest$ID[1:25])
+  top25cons<-cbind(top25cons,fcons$ID[1:25])
+  
+  alphpsmcrit<-c(alphpsmcrit,substr(files[i],1,8))
+}
+colnames(top25res)<-colnames(top25cons)<-alphpsmcrit
+rownames(top25res)<-rownames(top25cons)<-NULL
+head(alphpsmcrit)
+#convert allfiles from long format to wide format
+allfiles<-allfiles[,-which(colnames(allfiles)=="cols")]
+allfiles$ID<-factor(allfiles$ID)
+allfiles$alpha<-factor(allfiles$alpha)
+
+allfiles$psmcrit<-factor(allfiles$psmcrit)
 allfiles<-left_join(allfiles,allconsrest)
 
 allfiles<-allfiles[order(allfiles$ID,allfiles$alpha,allfiles$psmcrit),]
@@ -99,12 +153,12 @@ y.sd<-c(sd(wide.3$diff.psm.1),
         sd(wide.3$diff.psm.45),
         sd(wide.3$diff.psm.5))
 
-plot(x,y,type="p",pch=16,col="darkgray", ylab="Change in Prioritization Rank", xlab=expression(paste("PSM"[crit])), ylim=c(0,450), bty="l",cex.lab= 1.5,cex.axis = 1.5 )
+plot(x,y,type="p",pch=16,col="darkgray", ylab="Change in prioritization rank", xlab=expression(paste("PSM"[crit])), ylim=c(0,450), bty="l",cex.lab= 1.5,cex.axis = 1.5 )
 arrows(x,y+y.sd,x,y-y.sd,code=3,length=0,col="lightgray",lwd=2 )
 points(x,y,pch=16,col="darkgray",cex=2)
 points(0.3, mean(chincoho$diff.chin), pch = 16,cex = 2,col = "darkblue" )
 arrows(0.3,mean(chincoho$diff.chin)+sd(chincoho$diff.chin),0.3,mean(chincoho$diff.chin)-sd(chincoho$diff.chin),code=3,length=0,col="darkblue",lwd=2 )
-
+mtext(side= 3,"A)", line = 1, adj=0,cex=2)
 #alpha/uncertainty
 x=c(0.70,0.75,0.80,0.85,0.90,0.95,0.99)
 y<-c(mean(wide.3$diff.7),
@@ -126,6 +180,7 @@ arrows(x,y+y.sd,x,y-y.sd,code=3,length=0,col="gray",lwd=2 )
 points(x,y,pch=16,col="darkgray",cex=2)
 points(0.95, mean(chincoho$diff.chin), pch = 16,cex = 2,col = "darkblue" )
 arrows(0.95,mean(chincoho$diff.chin)+sd(chincoho$diff.chin),0.95,mean(chincoho$diff.chin)-sd(chincoho$diff.chin),code=3,length=0,col="darkblue",lwd=2 )
+mtext(side= 3,"B)", line = 1, adj=0,cex=2)
 
 #metric
 # x=c(.5,1.5)
