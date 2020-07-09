@@ -550,7 +550,7 @@ par(mfrow = c(1,3), mar = c(5.1, 4.5, 4.1, 3))
 
 plot(Z, PSM, pch = "", las = 1, cex.axis = 1.5, cex.lab = 1.8,
      xlim = range(newZ), ylim = c(0,1), xaxs = "i",
-     xlab = bquote("Urbanization (" * italic(Z) * ")"), ylab = "Predicted PSM")
+     xlab = bquote("Urbanization (" * italic(Z) * ")"), ylab = "Predicted mortality")
 title("A)", adj = 0, cex.main = 1.5)
 # selected site: PSM vs. Z curve and current conditions
 polygon(c(newZ[newsites==show_crv], rev(newZ[newsites==show_crv])),
@@ -565,7 +565,7 @@ points(Z[show_num], PSM[show_num], pch = ifelse(show_site %in% psm$site, 15, 16)
 
 plot(Z, PSM, pch = "", las = 1, cex.axis =1.5, cex.lab = 1.8,
      xlim = range(newZ), ylim = c(0,1), xaxs = "i",
-     xlab = bquote("Urbanization (" * italic(Z) * ")"), ylab = "Predicted Mortality")
+     xlab = bquote("Urbanization (" * italic(Z) * ")"), ylab = "Predicted mortality")
 title("B)", adj = 0, cex.main = 1.5)
 # selected site: PSM vs. Z curve and current conditions
 polygon(c(newZ[newsites==show_crv], rev(newZ[newsites==show_crv])),
@@ -602,7 +602,7 @@ text(par("usr")[1] - 0.02, psm_crit, bquote(PSM[crit]), adj = c(1,0.5), col = "r
 
 plot(Z, PSM, pch = "", las = 1, cex.axis = 1.5, cex.lab = 1.8,
      xlim = range(newZ), ylim = c(0,1), xaxs = "i",
-     xlab = bquote("Urbanization (" * italic(Z) * ")"), ylab = "Predicted Mortality")
+     xlab = bquote("Urbanization (" * italic(Z) * ")"), ylab = "Predicted mortality")
 title("C)", adj = 0, cex.main = 1.5)
 # all PSM vs. Z curves and current conditions
 for(j in unique(newsites))
@@ -700,7 +700,7 @@ filled.contour(x = psm_crit_vals, y = alpha_vals,
                z = matrix(delta_z_dat$delta_z, length(psm_crit_vals), length(alpha_vals)),
                levels = levs, col = cols,
                key.title = title(main = expression(Delta * italic(z)), line = 1, cex.main = 1.5), 
-               xlab = "Critical PSM threshold", 
+               xlab = "Critical pre-spawn mortality threshold", 
                ylab = bquote("Confidence level (" * alpha * ")"), 
                cex.lab = 1.5, cex.axis = 1.2)
 
