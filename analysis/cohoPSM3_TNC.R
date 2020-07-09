@@ -551,7 +551,7 @@ par(mfrow = c(1,3), mar = c(5.1, 4.5, 4.1, 3))
 plot(Z, PSM, pch = "", las = 1, cex.axis = 1.5, cex.lab = 1.8,
      xlim = range(newZ), ylim = c(0,1), xaxs = "i",
 
-     xlab = bquote("Urbanization (" * italic(Z) * ")"), ylab = "Predicted pre-spawn mortality")
+     xlab = bquote("Urbanization (" * italic(Z) * ")"), ylab = "Predicted mortality")
 title("A)", adj = 0, cex.main = 1.5)
 # selected site: PSM vs. Z curve and current conditions
 polygon(c(newZ[newsites==show_crv], rev(newZ[newsites==show_crv])),
