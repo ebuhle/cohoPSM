@@ -1,9 +1,9 @@
-  #make a table andplot showing how change sin alpha and psmcrit affect prioritization
-  #started by ailene
-  #dec 22, 2019
+#make a table andplot showing how change sin alpha and psmcrit affect prioritization
+#started by ailene
+#dec 22, 2019
   
-  ## housekeeping
-  rm(list=ls()) 
+## housekeeping
+rm(list=ls()) 
 options(device = ifelse(.Platform$OS.type == "windows", "windows", "quartz"))
 #options(stringsAsFactors = FALSE)
 ##set working directory
@@ -158,7 +158,7 @@ arrows(x,y+y.sd,x,y-y.sd,code=3,length=0,col="lightgray",lwd=2 )
 points(x,y,pch=16,col="darkgray",cex=2)
 points(0.3, mean(chincoho$diff.chin), pch = 16,cex = 2,col = "darkblue" )
 arrows(0.3,mean(chincoho$diff.chin)+sd(chincoho$diff.chin),0.3,mean(chincoho$diff.chin)-sd(chincoho$diff.chin),code=3,length=0,col="darkblue",lwd=2 )
-mtext(side= 3,"A)", line = 1, adj=0,cex=2)
+mtext(side=3,"A)",line=1,adj=0, cex=2)
 #alpha/uncertainty
 x=c(0.70,0.75,0.80,0.85,0.90,0.95,0.99)
 y<-c(mean(wide.3$diff.7),
@@ -175,12 +175,12 @@ y.sd<-c(sd(wide.3$diff.7),
      sd(wide.3$diff.9),
      sd(wide.3$diff.95),
      sd(wide.3$diff.99))
-plot(x,y,type="p",pch=16,col="darkgray", ylab="Change in Prioritization Rank", xlab="Uncertainty",ylim=c(0,450), bty="l",cex.lab= 1.5,cex.axis = 1.5)
+plot(x,y,type="p",pch=16,col="darkgray", ylab="Change in prioritization rank", xlab="Uncertainty",ylim=c(0,450), bty="l",cex.lab= 1.5,cex.axis = 1.5)
 arrows(x,y+y.sd,x,y-y.sd,code=3,length=0,col="gray",lwd=2 )
 points(x,y,pch=16,col="darkgray",cex=2)
 points(0.95, mean(chincoho$diff.chin), pch = 16,cex = 2,col = "darkblue" )
 arrows(0.95,mean(chincoho$diff.chin)+sd(chincoho$diff.chin),0.95,mean(chincoho$diff.chin)-sd(chincoho$diff.chin),code=3,length=0,col="darkblue",lwd=2 )
-mtext(side= 3,"B)", line = 1, adj=0,cex=2)
+mtext(side=3,"B)",line=1,adj=0, cex=2)
 
 #metric
 # x=c(.5,1.5)
