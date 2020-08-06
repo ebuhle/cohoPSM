@@ -544,14 +544,14 @@ if(save_plot) {
   dev.new(width = 15, height = 5)
 }
 
-par(mfrow = c(1,3), mar = c(5.1, 4.5, 4.1, 3))
+par(mfrow = c(1,3), mar = c(5, 5, 4.1, 1))
 
 # Panel A
 
 plot(Z, PSM, pch = "", las = 1, cex.axis = 1.5, cex.lab = 1.8,
      xlim = range(newZ), ylim = c(0,1), xaxs = "i",
      xlab = bquote("Urbanization (" * italic(Z) * ")"), 
-     ylab = bquote("Predicted mortality (" * italic(M) * ")"))
+     ylab = bquote("Pre-spawn mortality (" * italic(M) * ")"))
 title("A)", adj = 0, cex.main = 1.5)
 # selected site: PSM vs. Z curve and current conditions
 polygon(c(newZ[newsites==show_crv], rev(newZ[newsites==show_crv])),
@@ -621,7 +621,7 @@ text(z_out$z_crit[show_num], par("usr")[3] - 0.05, bquote(italic(Z)[crit]),
      adj = c(0.3,0), xpd = TRUE, col = "red")
 # color legend for delta_z
 shape::colorlegend(cividis(100, direction = -1, alpha = 0.9), 
-                   posx = c(0.15, 0.18), posy = c(0.4, 0.9),
+                   posx = c(0.17, 0.2), posy = c(0.4, 0.9),
                    zlim = round(range(z_out$delta_z)), dz = 1,
                    digit = 0, main = expression(Delta * italic(Z)), main.cex = 1.5)
 
@@ -665,7 +665,7 @@ save_plot <- TRUE
 prediction_level <- "site"  # "site" or "year"-within-site
 show_site <- "845"
 show_num <- which(levels(psm_all$site) == show_site)
-recompute <- TRUE
+recompute <- FALSE
 
 psm_crit_vals <- seq(0.1, 0.5, 0.01)
 alpha_vals <- seq(0.7, 0.99, 0.01)
@@ -703,8 +703,8 @@ par(mar = c(5.1, 4.5, 4.1, 2.1))
 filled.contour(x = psm_crit_vals, y = alpha_vals, 
                z = matrix(delta_z_dat$delta_z, length(psm_crit_vals), length(alpha_vals)),
                levels = levs, col = cols,
-               key.title = title(main = expression(Delta * italic(z)), line = 1, cex.main = 1.5), 
-               xlab = "Critical pre-spawn mortality threshold", 
+               key.title = title(main = expression(Delta * italic(Z)), line = 1, cex.main = 1.5), 
+               xlab = bquote("Critical pre-spawn mortality threshold (" * italic(M)[crit] * ")"), 
                ylab = bquote("Confidence level (" * alpha * ")"), 
                cex.lab = 1.5, cex.axis = 1.2)
 

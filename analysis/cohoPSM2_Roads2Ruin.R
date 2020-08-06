@@ -52,7 +52,8 @@ stan_psm <- sem_psm(psm = psm, X = X, L = 1,
 
 # Inspect and use shinystan to explore samples
 print(stan_psm, prob = c(0.025, 0.5, 0.975), 
-      pars = c("b0","b_su","b_ppt_su","b_fa","b_ppt_fa","g_mu_X","p_psm","ll_psm","Z"), include = F)
+      pars = c("b0","b_su","b_ppt_su","b_fa","b_ppt_fa","g_mu_X","p_psm","ll_psm","Z"), 
+      include = FALSE)
 # launch_shinystan(stan_psm)
 
 # Save stanfit
@@ -343,30 +344,20 @@ save(stan_psm_cv_site_list, stan_psm_cv_site_mods, file = here("analysis","resul
 
 ## @knitr stan_psm_all_r2r
 # Fit it!
-stan_psm_all <- sem_psm(psm = psm, X = X, L = 1,
+stan_psm_all <- sem_psm(psm = psm_all, X = X_all, L = 1,
                    normal_indx = normal_indx, gamma_indx = gamma_indx,
                    I0_Z = 1, I_su = 1, I_su_Z = 1, I_fa = 1, I_fa_Z = 1,
-                   I_fit = rep(1, nrow(psm)), I_lpd = rep(1, nrow(psm)),
-                   pars = c("a0","A","Z","phi","g_mu_X",
-                            "mu_b0","b0_Z","sigma_b0","b0",
-                            "mu_b_su","b_su_Z","sigma_b_su","b_su",
-                            "mu_b_fa","b_fa_Z","sigma_b_fa","b_fa",
-                            "sigma_psm","p_psm","ll_psm"), 
+                   I_fit = as.numeric(psm_all$data=="psm"), I_lpd = rep(0, nrow(psm_all)),
+                   pars = c("a0","A","Z","phi",
+                            "mu_b0","b0_Z","sigma_b0","b0_std",
+                            "mu_b_su","b_su_Z","sigma_b_su",
+                            "mu_b_fa","b_fa_Z","sigma_b_fa",
+                            "sigma_psm","p_psm"), 
                    chains = 3, iter = 12000, warmup = 2000, thin = 5)
 
-stan_psm_all <- stan(file = here("analysis","stan","cohoPSM_SEM.stan"),
-                     data = stan_dat_all, 
-                     init = lapply(1:3, function(i) stan_init(stan_dat_all)),
-                     pars = c("a0","A","Z","phi",
-                              "mu_b0","b0_Z","sigma_b0","b0_std",
-                              "mu_b_su","b_su_Z","sigma_b_su",
-                              "mu_b_fa","b_fa_Z","sigma_b_fa",
-                              "sigma_psm","p_psm"), 
-                     chains = 3, iter = 12000, warmup = 2000, thin = 5,
-                     control = list(stepsize = 0.05))
-
 # Print and explore fit in shinystan
-print(stan_psm_all, prob = c(0.025, 0.5, 0.975), pars = c("p_psm","Z","b0_std"), include = F)
+print(stan_psm_all, prob = c(0.025, 0.5, 0.975), pars = c("p_psm","Z","b0_std"), 
+      include = FALSE)
 # launch_shinystan(stan_psm_all)
 
 # Store Z and predicted P(PSM) in matrix
