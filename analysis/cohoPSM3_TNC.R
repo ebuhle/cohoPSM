@@ -550,8 +550,8 @@ par(mfrow = c(1,3), mar = c(5.1, 4.5, 4.1, 3))
 
 plot(Z, PSM, pch = "", las = 1, cex.axis = 1.5, cex.lab = 1.8,
      xlim = range(newZ), ylim = c(0,1), xaxs = "i",
-
-     xlab = bquote("Urbanization (" * italic(Z) * ")"), ylab = "Predicted mortality")
+     xlab = bquote("Urbanization (" * italic(Z) * ")"), 
+     ylab = bquote("Predicted mortality (" * italic(M) * ")"))
 title("A)", adj = 0, cex.main = 1.5)
 # selected site: PSM vs. Z curve and current conditions
 polygon(c(newZ[newsites==show_crv], rev(newZ[newsites==show_crv])),
@@ -566,8 +566,7 @@ points(Z[show_num], PSM[show_num], pch = ifelse(show_site %in% psm$site, 15, 16)
 
 plot(Z, PSM, pch = "", las = 1, cex.axis =1.5, cex.lab = 1.8,
      xlim = range(newZ), ylim = c(0,1), xaxs = "i",
-     xlab = bquote("Urbanization (" * italic(Z) * ")"), ylab = "Predicted mortality")
-
+     xlab = bquote("Urbanization (" * italic(Z) * ")"), ylab = "")
 title("B)", adj = 0, cex.main = 1.5)
 # selected site: PSM vs. Z curve and current conditions
 polygon(c(newZ[newsites==show_crv], rev(newZ[newsites==show_crv])),
@@ -581,12 +580,13 @@ points(Z[show_num], PSM[show_num], pch = ifelse(show_site %in% psm$site, 15, 16)
 vioplot2(psm_pred_show_site, at = z_out$z_crit[show_num], add = TRUE, 
          col = NULL, border = "black", lwd = 2, wex = 0.15, drawRect = FALSE, pchMed = "")
 abline(v = z_out$z_crit[show_num], col = "red")
-text(z_out$z_crit[show_num], par("usr")[3] - 0.03, bquote(italic(Z)[crit]), adj = c(0.3,0), 
-     xpd = TRUE, col = "red")
+text(z_out$z_crit[show_num], par("usr")[3] - 0.05, bquote(italic(Z)[crit]), 
+     adj = c(0.3,0), xpd = TRUE, col = "red")
 # selected site: delta_PSM (change in median PSM risk at z_crit relative to current)
 segments(x0 = z_out$z_crit[show_num], x1 = Z[show_num], y0 = median(psm_pred_show_site), lty = 2)
 arrows(x0 = Z[show_num], y0 = PSM[show_num], y1 = median(psm_pred_show_site), length = 0.1)
-text(Z[show_num] + 0.02, 0.5*PSM[show_num] + 0.5*median(psm_pred_show_site), expression(Delta * "PSM"), adj = 0)
+text(Z[show_num] + 0.02, 0.5*PSM[show_num] + 0.5*median(psm_pred_show_site), 
+     expression(Delta * italic(M)), adj = 0)
 # selected site: posterior density of z; delta_z
 vioplot2(Z_draws[,show_num], quantiles = alpha, horizontal = TRUE, at = PSM[show_num],
          add = TRUE, col = NULL, border = "black", lwd = 2, lwd.quantile = 2, wex = 0.05, 
@@ -594,18 +594,18 @@ vioplot2(Z_draws[,show_num], quantiles = alpha, horizontal = TRUE, at = PSM[show
 qz <- quantile(Z_draws[,show_num], alpha)
 arrows(x0 = qz, x1 = z_out$z_crit[show_num], y0 = PSM[show_num], 
        col = dzcols[show_num], length = 0.1, lwd = 2)
-text(0.25*qz + 0.75*z_out$z_crit[show_num], PSM[show_num] + 0.01, expression(Delta * italic(Z)), 
-     adj = c(0.5,0), col = dzcols[show_num])
+text(0.25*qz + 0.75*z_out$z_crit[show_num], PSM[show_num] + 0.01, 
+     expression(Delta * italic(Z)), adj = c(0.5,0), col = dzcols[show_num])
 # PSM threshold
 abline(h = psm_crit, col = "red", lwd = 2)
-text(par("usr")[1] - 0.02, psm_crit, bquote(PSM[crit]), adj = c(1,0.5), col = "red", xpd = TRUE)
+text(par("usr")[1] - 0.02, psm_crit, bquote(italic(M)[crit]), 
+     adj = c(1,0.5), col = "red", xpd = TRUE)
 
 # Panel C
 
 plot(Z, PSM, pch = "", las = 1, cex.axis = 1.5, cex.lab = 1.8,
      xlim = range(newZ), ylim = c(0,1), xaxs = "i",
-     xlab = bquote("Urbanization (" * italic(Z) * ")"), ylab = "Predicted mortality")
-
+     xlab = bquote("Urbanization (" * italic(Z) * ")"), ylab = "")
 title("C)", adj = 0, cex.main = 1.5)
 # all PSM vs. Z curves and current conditions
 for(j in unique(newsites))
@@ -614,15 +614,16 @@ points(Z, PSM, pch = ifelse(psm_all$data=="psm", 15, 16),
        cex = ifelse(psm_all$data=="psm", 1.8, 2), col = dzcolst)
 # PSM threshold and all z_crit values
 abline(h = psm_crit, col = "red", lwd = 2)
-text(par("usr")[1] - 0.02, psm_crit, bquote(PSM[crit]), adj = c(1,0.5), col = "red", xpd = TRUE)
+text(par("usr")[1] - 0.02, psm_crit, bquote(italic(M)[crit]), 
+     adj = c(1,0.5), col = "red", xpd = TRUE)
 rug(z_out$z_crit, col = transparent("red", 0.5))
-text(z_out$z_crit[show_num], par("usr")[3] - 0.03, bquote(italic(Z)[crit]), adj = c(0.3,0), 
-     xpd = TRUE, col = "red")
+text(z_out$z_crit[show_num], par("usr")[3] - 0.05, bquote(italic(Z)[crit]), 
+     adj = c(0.3,0), xpd = TRUE, col = "red")
 # color legend for delta_z
 shape::colorlegend(cividis(100, direction = -1, alpha = 0.9), 
                    posx = c(0.15, 0.18), posy = c(0.4, 0.9),
                    zlim = round(range(z_out$delta_z)), dz = 1,
-                   digit = 0, main = expression(Delta * italic(z)), main.cex = 1.5)
+                   digit = 0, main = expression(Delta * italic(Z)), main.cex = 1.5)
 
 if(save_plot) dev.off()
 
