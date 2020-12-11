@@ -14,10 +14,10 @@ library(here)
 ## @knitr data_psm_sites
 
 # read in spawner data
-spawner_data <- read.csv(here("data","spawner_data.csv"), header=T)
+spawner_data <- read.csv(here("data","spawner_data.csv"), header = TRUE, stringsAsFactors = TRUE)
 
 # read in landscape data
-spatial_data <- read.csv(here("data","spatial_data.csv"), header=T)
+spatial_data <- read.csv(here("data","spatial_data.csv"), header = TRUE, stringsAsFactors = TRUE)
 
 # LU/LC and roads data
 lulc_roads_data <- spatial_data[,c("site","watershed","area","ccap_decid","ccap_open","ccap_evgrn",
@@ -32,7 +32,7 @@ lulc_roads_data$area <- lulc_roads_data$area/1e4
 lulc_roads_data[,grep("roads", names(lulc_roads_data))] <- lulc_roads_data[,grep("roads", names(lulc_roads_data))]/1000
 
 # Pretty variable names for LU/LC and roads
-lulc_roads_labels <- read.csv(here("data","lulc_roads_labels.csv"), header=T)
+lulc_roads_labels <- read.csv(here("data","lulc_roads_labels.csv"), header = TRUE, stringsAsFactors = TRUE)
 lulc_roads_labels$plot_label <- ordered(as.character(lulc_roads_labels$plot_label),
                                         levels = c("Imperviousness","High developed","Medium developed",
                                                    "Low developed","Evergreen","Deciduous","Mixed forest",
@@ -67,7 +67,7 @@ psm <- psm[order(psm$site,psm$year),]
 ## @ knitr data_predict_sites
 
 # read in landscape data
-spatial_data_pre <- read.csv(here("data","spatial_data_predict.csv"), header=T)
+spatial_data_pre <- read.csv(here("data","spatial_data_predict.csv"), header = TRUE, stringsAsFactors = TRUE)
 names(spatial_data_pre) <- gsub("ID", "site", names(spatial_data_pre))
 spatial_data_pre$watershed <- NA
 
@@ -171,7 +171,7 @@ X1_all <- sweep(sweep(X1_all, 2, colMeans(X1_all), "-"), 2, apply(X1_all, 2, sd)
 
 # proportion data:
 # bound away from 0 and 1 and logit-transform
-X2_all <- as.matrix(lulc_roads_data_all[,"nlcd_imperv",drop=F])
+X2_all <- as.matrix(lulc_roads_data_all[,"nlcd_imperv",drop = FALSE])
 X2_all[X2_all==0] <- 1e-4
 X2_all[X2_all==1] <- 1 - 1e-4
 X2_all <- qlogis(X2_all)
@@ -208,7 +208,7 @@ stan_dat_all <- stan_data(psm = psm_all, X = X_all,
 
 # Species occurrence in WADOE basins from SalmonScape
 salmonscape <- read.csv(here("data","salmonscape","WA_integrated_Fish_coho_chinook_chum_with_WADOE.csv"), 
-                        header = TRUE, skip = 1)
+                        header = TRUE, skip = 1, stringsAsFactors = TRUE)
 names(salmonscape)[1] <- "site"
 salmonscape$site <- as.character(salmonscape$site)
 names(salmonscape)[-1] <- tolower(names(salmonscape)[-1])
@@ -227,7 +227,8 @@ salmonscape <- psm_all %>% select(c(data, site)) %>% mutate(site = as.character(
   left_join(salmonscape)
 
 # Pretty names for selected variables
-salmonscape_labels <- read.csv(here("data","salmonscape_labels.csv"), header=T, stringsAsFactors = FALSE)
+salmonscape_labels <- read.csv(here("data","salmonscape_labels.csv"), 
+                               header = TRUE, stringsAsFactors = FALSE)
 
 
 
